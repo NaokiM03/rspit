@@ -1,4 +1,4 @@
-use std::{fs, io::Write, process};
+use std::{env, fs, io::Write, process};
 
 use anyhow::{bail, Result};
 use tempdir::TempDir;
@@ -62,6 +62,14 @@ fn main() -> Result<()> {
         src_file.write_all(project.src.as_bytes())?;
     }
 
+    let project_target_dir = project_dir.join("target");
+    let cache_target_dir = env::temp_dir()
+        .join("pit")
+        .join(&project.name)
+        .join("target");
+    fs::create_dir_all(&cache_target_dir)?;
+    fs::rename(&cache_target_dir, &project_target_dir)?;
+
     {
         let mut command = process::Command::new("cargo");
         command.arg("build");
@@ -79,6 +87,11 @@ fn main() -> Result<()> {
             bail!("Failed to execute.");
         }
     }
+
+    if cache_target_dir.exists() {
+        bail!("Failed to handle cache.")
+    }
+    fs::rename(project_target_dir, cache_target_dir)?;
 
     Ok(())
 }

@@ -1,3 +1,30 @@
+#[derive(Debug)]
+struct Project {
+    toml: String,
+    src: String,
+}
+
+impl From<&str> for Project {
+    fn from(src: &str) -> Self {
+        let toml = src
+            .lines()
+            .skip_while(|line| line.is_empty())
+            .take_while(|line| line.starts_with("//#"))
+            .map(|line| line[3..].trim())
+            // .filter(|line| !line.is_empty())
+            .collect::<Vec<&str>>()
+            .join("\n");
+
+        let src = src
+            .lines()
+            .skip_while(|line| line.is_empty() || line.starts_with("//#"))
+            .collect::<Vec<&str>>()
+            .join("\n");
+
+        Project { toml, src }
+    }
+}
+
 fn main() {
     println!("Hello, world!");
 }

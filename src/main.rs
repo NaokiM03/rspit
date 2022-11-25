@@ -1,5 +1,6 @@
 #[derive(Debug)]
 struct Project {
+    name: String,
     toml: String,
     src: String,
 }
@@ -21,7 +22,17 @@ impl From<&str> for Project {
             .collect::<Vec<&str>>()
             .join("\n");
 
-        Project { toml, src }
+        let name = {
+            let value = toml
+                .parse::<toml::Value>()
+                .expect("Failed to parse string into toml.");
+            value["package"]["name"]
+                .as_str()
+                .expect("Failed to extract name from toml.")
+                .to_owned()
+        };
+
+        Project { name, toml, src }
     }
 }
 
@@ -48,6 +59,8 @@ fn main() {
 }
 "#;
 
+    const NAME: &str = "test";
+
     const TOML: &str = r#"
 [package]
 name = "test"
@@ -68,6 +81,7 @@ fn main() {
 "#;
 
     let project = Project::from(INPUT);
+    assert_eq!(project.name, NAME);
     assert_eq!(project.toml, TOML.trim());
     assert_eq!(project.src, SRC.trim());
 }

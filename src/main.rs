@@ -84,32 +84,35 @@ fn execute(project_dir: &Path, name: &str) -> Result<()> {
 
 fn main() -> Result<()> {
     let src = fs::read_to_string("./sample/snippet.rs")?;
-    let project = Project::from(src.as_str());
 
     let temp_dir = TempDir::new("pit")?;
-    let project_dir = temp_dir.path().join(&project.name);
-    fs::create_dir(&project_dir)?;
+    for package in src.split("//# ---") {
+        let project = Project::from(package);
 
-    create_toml(&project_dir, &project.toml)?;
-    create_src(&project_dir, &project.src)?;
+        let project_dir = temp_dir.path().join(&project.name);
+        fs::create_dir(&project_dir)?;
 
-    let project_target_dir = project_dir.join("target");
-    let cache_target_dir = env::temp_dir()
-        .join("pit")
-        .join(&project.name)
-        .join("target");
-    fs::create_dir_all(&cache_target_dir)?;
-    // Restore target directory from cache.
-    fs::rename(&cache_target_dir, &project_target_dir)?;
+        create_toml(&project_dir, &project.toml)?;
+        create_src(&project_dir, &project.src)?;
 
-    build_package(&project_dir)?;
-    execute(&project_dir, &project.name)?;
+        let project_target_dir = project_dir.join("target");
+        let cache_target_dir = env::temp_dir()
+            .join("pit")
+            .join(&project.name)
+            .join("target");
+        fs::create_dir_all(&cache_target_dir)?;
+        // Restore target directory from cache.
+        fs::rename(&cache_target_dir, &project_target_dir)?;
 
-    if cache_target_dir.exists() {
-        bail!("Failed to handle cache.")
+        build_package(&project_dir)?;
+        execute(&project_dir, &project.name)?;
+
+        if cache_target_dir.exists() {
+            bail!("Failed to handle cache.")
+        }
+        // Store target directory in cache.
+        fs::rename(project_target_dir, cache_target_dir)?;
     }
-    // Store target directory in cache.
-    fs::rename(project_target_dir, cache_target_dir)?;
 
     Ok(())
 }

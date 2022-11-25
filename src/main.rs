@@ -1,4 +1,4 @@
-use std::{env, fs, io::Write, path::Path, process};
+use std::{env, fs, path::Path, process};
 
 use anyhow::{bail, Result};
 use tempdir::TempDir;
@@ -43,8 +43,7 @@ impl From<&str> for Project {
 
 fn create_toml(project_dir: &Path, toml: &str) -> Result<()> {
     let toml_file = project_dir.join("Cargo.toml");
-    let mut toml_file = fs::File::create(toml_file)?;
-    toml_file.write_all(toml.as_bytes())?;
+    fs::write(toml_file, toml.as_bytes())?;
 
     Ok(())
 }
@@ -53,8 +52,7 @@ fn create_src(project_dir: &Path, src: &str) -> Result<()> {
     let src_dir = project_dir.join("src");
     fs::create_dir(&src_dir)?;
     let src_file = src_dir.join("main.rs");
-    let mut src_file = fs::File::create(src_file)?;
-    src_file.write_all(src.as_bytes())?;
+    fs::write(src_file, src.as_bytes())?;
 
     Ok(())
 }

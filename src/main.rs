@@ -1,3 +1,8 @@
+use std::{fs, io::Write, process};
+
+use anyhow::{bail, Result};
+use tempdir::TempDir;
+
 #[derive(Debug)]
 struct Project {
     name: String,
@@ -36,8 +41,46 @@ impl From<&str> for Project {
     }
 }
 
-fn main() {
-    println!("Hello, world!");
+fn main() -> Result<()> {
+    let src = fs::read_to_string("./sample/snippet.rs")?;
+    let project = Project::from(src.as_str());
+
+    let temp_dir = TempDir::new("pit")?;
+
+    let project_dir = temp_dir.path().join(&project.name);
+    fs::create_dir(&project_dir)?;
+    {
+        let toml_file = project_dir.join("Cargo.toml");
+        let mut toml_file = fs::File::create(toml_file)?;
+        toml_file.write_all(project.toml.as_bytes())?;
+    }
+    {
+        let src_dir = project_dir.join("src");
+        fs::create_dir(&src_dir)?;
+        let src_file = src_dir.join("main.rs");
+        let mut src_file = fs::File::create(src_file)?;
+        src_file.write_all(project.src.as_bytes())?;
+    }
+
+    {
+        let mut command = process::Command::new("cargo");
+        command.arg("build");
+        let exit_status = command.current_dir(&project_dir).spawn()?.wait()?;
+
+        if !exit_status.success() {
+            bail!("Failed to build.");
+        }
+    }
+    {
+        let execute_path = project_dir.join("target").join("debug").join(&project.name);
+        let exit_status = process::Command::new(execute_path).spawn()?.wait()?;
+
+        if !exit_status.success() {
+            bail!("Failed to execute.");
+        }
+    }
+
+    Ok(())
 }
 
 #[test]

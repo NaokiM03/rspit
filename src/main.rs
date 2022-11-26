@@ -250,7 +250,6 @@ struct Args {
 #[derive(Debug, Subcommand)]
 enum SubCommands {
     /// Run all package in file
-    #[command(about)]
     Run {
         file_path: String,
         /// Do not print cargo log messages

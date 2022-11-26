@@ -7,13 +7,13 @@ use tempdir::TempDir;
 use tiny_ansi::TinyAnsi;
 
 #[derive(Debug)]
-struct Project {
+struct Package {
     name: String,
     toml: String,
     src: String,
 }
 
-impl From<&str> for Project {
+impl From<&str> for Package {
     fn from(src: &str) -> Self {
         let toml = src
             .lines()
@@ -40,7 +40,7 @@ impl From<&str> for Project {
                 .to_owned()
         };
 
-        Project { name, toml, src }
+        Package { name, toml, src }
     }
 }
 
@@ -50,7 +50,7 @@ struct Identity {
     hash: String,
 }
 
-impl Project {
+impl Package {
     fn gen_identity(&self) -> Identity {
         let hash = Sha256::new()
             .chain_update(&self.toml)
@@ -63,15 +63,15 @@ impl Project {
     }
 }
 
-fn create_toml(project_dir: &Path, toml: &str) -> Result<()> {
-    let toml_file = project_dir.join("Cargo.toml");
+fn create_toml(package_dir: &Path, toml: &str) -> Result<()> {
+    let toml_file = package_dir.join("Cargo.toml");
     fs::write(toml_file, toml.as_bytes())?;
 
     Ok(())
 }
 
-fn create_src(project_dir: &Path, src: &str) -> Result<()> {
-    let src_dir = project_dir.join("src");
+fn create_src(package_dir: &Path, src: &str) -> Result<()> {
+    let src_dir = package_dir.join("src");
     fs::create_dir(&src_dir)?;
     let src_file = src_dir.join("main.rs");
     fs::write(src_file, src.as_bytes())?;
@@ -79,10 +79,10 @@ fn create_src(project_dir: &Path, src: &str) -> Result<()> {
     Ok(())
 }
 
-fn build_package(project_dir: &Path) -> Result<()> {
+fn build_package(package_dir: &Path) -> Result<()> {
     let mut command = process::Command::new("cargo");
     command.arg("build");
-    let exit_status = command.current_dir(&project_dir).spawn()?.wait()?;
+    let exit_status = command.current_dir(&package_dir).spawn()?.wait()?;
 
     if !exit_status.success() {
         bail!("Failed to build.");
@@ -91,8 +91,8 @@ fn build_package(project_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-fn execute(project_dir: &Path, name: &str) -> Result<()> {
-    let execute_path = project_dir.join("target").join("debug").join(name);
+fn execute(package_dir: &Path, name: &str) -> Result<()> {
+    let execute_path = package_dir.join("target").join("debug").join(name);
     let exit_status = process::Command::new(execute_path).spawn()?.wait()?;
 
     if !exit_status.success() {
@@ -107,24 +107,24 @@ fn main() -> Result<()> {
 
     let temp_dir = TempDir::new("pit")?;
     for package in src.split("//# ---") {
-        let project = Project::from(package);
+        let package = Package::from(package);
 
         println!(
             "{}",
-            &format!("Start {} package", &project.name)
+            &format!("Start {} package", &package.name)
                 .bright_green()
                 .bold()
         );
 
-        let cache_dir = env::temp_dir().join("pit").join(&project.name);
+        let cache_dir = env::temp_dir().join("pit").join(&package.name);
 
-        let identity = project.gen_identity();
+        let identity = package.gen_identity();
         let cache_identity_path = cache_dir.join("identity_hash.toml");
         // If there is no change in iether src or toml, use the executable file on the cache.
         if let Ok(cache_identity) = fs::read(&cache_identity_path) {
             let cache_identity: Identity = toml::from_slice(&cache_identity)?;
             if identity.hash == cache_identity.hash {
-                let cache_execute_path = cache_dir.join("target").join("debug").join(&project.name);
+                let cache_execute_path = cache_dir.join("target").join("debug").join(&package.name);
                 let exit_status = process::Command::new(cache_execute_path).spawn()?.wait()?;
 
                 if exit_status.success() {
@@ -133,26 +133,26 @@ fn main() -> Result<()> {
             }
         }
 
-        let project_dir = temp_dir.path().join(&project.name);
-        fs::create_dir(&project_dir)?;
+        let package_dir = temp_dir.path().join(&package.name);
+        fs::create_dir(&package_dir)?;
 
-        create_toml(&project_dir, &project.toml)?;
-        create_src(&project_dir, &project.src)?;
+        create_toml(&package_dir, &package.toml)?;
+        create_src(&package_dir, &package.src)?;
 
-        let project_target_dir = project_dir.join("target");
+        let package_target_dir = package_dir.join("target");
         let cache_target_dir = cache_dir.join("target");
         fs::create_dir_all(&cache_target_dir)?;
         // Restore target directory from cache.
-        fs::rename(&cache_target_dir, &project_target_dir)?;
+        fs::rename(&cache_target_dir, &package_target_dir)?;
 
-        build_package(&project_dir)?;
-        execute(&project_dir, &project.name)?;
+        build_package(&package_dir)?;
+        execute(&package_dir, &package.name)?;
 
         if cache_target_dir.exists() {
             bail!("Failed to handle cache.")
         }
         // Store target directory in cache.
-        fs::rename(project_target_dir, cache_target_dir)?;
+        fs::rename(package_target_dir, cache_target_dir)?;
 
         // Store the hash generated from src and toml.
         let identity = toml::to_string(&Identity {
@@ -166,7 +166,7 @@ fn main() -> Result<()> {
 }
 
 #[test]
-fn project_from() {
+fn package_from() {
     const INPUT: &str = r#"
 //# [package]
 //# name = "test"
@@ -205,8 +205,8 @@ fn main() {
 }
 "#;
 
-    let project = Project::from(INPUT);
-    assert_eq!(project.name, NAME);
-    assert_eq!(project.toml, TOML.trim());
-    assert_eq!(project.src, SRC.trim());
+    let package = Package::from(INPUT);
+    assert_eq!(package.name, NAME);
+    assert_eq!(package.toml, TOML.trim());
+    assert_eq!(package.src, SRC.trim());
 }

@@ -102,8 +102,11 @@ fn execute(package_dir: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
-    let src = fs::read_to_string("./sample/snippet.rs")?;
+fn run_all<P>(path: P) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let src = fs::read_to_string(path)?;
 
     let temp_dir = TempDir::new("pit")?;
     for package in src.split("//# ---") {
@@ -161,6 +164,12 @@ fn main() -> Result<()> {
         })?;
         fs::write(cache_identity_path, identity)?;
     }
+
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    run_all("./sample/snippet.rs")?;
 
     Ok(())
 }

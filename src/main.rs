@@ -43,20 +43,23 @@ impl From<&str> for Project {
     }
 }
 
-impl Project {
-    fn gen_hash(&self) -> String {
-        let hash = Sha256::new()
-            .chain_update(&self.toml)
-            .chain_update(&self.src)
-            .finalize();
-        format!("{:x}", hash)
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 struct Identity {
     name: String,
     hash: String,
+}
+
+impl Project {
+    fn gen_identity(&self) -> Identity {
+        let hash = Sha256::new()
+            .chain_update(&self.toml)
+            .chain_update(&self.src)
+            .finalize();
+        Identity {
+            name: self.name.to_owned(),
+            hash: format!("{:x}", hash),
+        }
+    }
 }
 
 fn create_toml(project_dir: &Path, toml: &str) -> Result<()> {
@@ -107,12 +110,12 @@ fn main() -> Result<()> {
 
         let cache_dir = env::temp_dir().join("pit").join(&project.name);
 
-        let hash = project.gen_hash();
-        let identity_path = cache_dir.join("identity_hash.toml");
+        let identity = project.gen_identity();
+        let cache_identity_path = cache_dir.join("identity_hash.toml");
         // If there is no change in iether src or toml, use the executable file on the cache.
-        if let Ok(identity) = fs::read(&identity_path) {
-            let identity: Identity = toml::from_slice(&identity)?;
-            if identity.hash == hash {
+        if let Ok(cache_identity) = fs::read(&cache_identity_path) {
+            let cache_identity: Identity = toml::from_slice(&cache_identity)?;
+            if identity.hash == cache_identity.hash {
                 let cache_execute_path = cache_dir.join("target").join("debug").join(&project.name);
                 let exit_status = process::Command::new(cache_execute_path).spawn()?.wait()?;
 
@@ -145,10 +148,10 @@ fn main() -> Result<()> {
 
         // Store the hash generated from src and toml.
         let identity = toml::to_string(&Identity {
-            name: project.name,
-            hash,
+            name: identity.name,
+            hash: identity.hash,
         })?;
-        fs::write(identity_path, identity)?;
+        fs::write(cache_identity_path, identity)?;
     }
 
     Ok(())

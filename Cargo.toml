@@ -11,6 +11,7 @@ sha2 = "0.10.6"
 serde = "1.0.147"
 serde_derive = "1.0.147"
 tiny-ansi = "0.1.0"
+clap = { version = "4.0.27", features = ["derive"] }
 
 [[bin]]
 name = "pit"

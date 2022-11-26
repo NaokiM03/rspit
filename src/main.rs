@@ -1,6 +1,7 @@
 use std::{env, fs, path::Path, process};
 
 use anyhow::{bail, Result};
+use clap::{Parser, Subcommand};
 use serde_derive::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tempdir::TempDir;
@@ -168,8 +169,30 @@ where
     Ok(())
 }
 
+#[derive(Debug, Parser)]
+#[command(author, version, about)]
+struct Args {
+    #[command(subcommand)]
+    command: Option<SubCommands>,
+}
+
+#[derive(Debug, Subcommand)]
+enum SubCommands {
+    /// Run all package in file
+    #[command(about)]
+    Run { file_path: String },
+}
+
 fn main() -> Result<()> {
-    run_all("./sample/snippet.rs")?;
+    let args = Args::parse();
+
+    if let Some(command) = args.command {
+        match command {
+            SubCommands::Run { file_path } => {
+                run_all(file_path)?;
+            }
+        }
+    }
 
     Ok(())
 }

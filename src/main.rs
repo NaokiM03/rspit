@@ -228,6 +228,18 @@ fn main() {{
     Ok(())
 }
 
+fn clean_cache_dir() -> Result<()> {
+    let cache_dir = env::temp_dir().join("pit");
+    for entry in cache_dir.read_dir()? {
+        if let Ok(entry) = entry {
+            dbg!(&entry);
+            fs::remove_dir_all(entry.path())?;
+        }
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 struct Args {
@@ -251,6 +263,7 @@ enum SubCommands {
     Add {
         file_path: String,
     },
+    Clean,
 }
 
 fn main() -> Result<()> {
@@ -266,6 +279,9 @@ fn main() -> Result<()> {
             }
             SubCommands::Add { file_path } => {
                 add_package(file_path)?;
+            }
+            SubCommands::Clean => {
+                clean_cache_dir()?;
             }
         }
     } else {

@@ -1,7 +1,7 @@
 use std::{env, fs, path::Path, process};
 
 use anyhow::{bail, Result};
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use serde_derive::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tempdir::TempDir;
@@ -192,6 +192,9 @@ fn main() -> Result<()> {
                 run_all(file_path)?;
             }
         }
+    } else {
+        let mut cmd = Args::command();
+        cmd.print_help()?;
     }
 
     Ok(())

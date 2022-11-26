@@ -107,6 +107,76 @@ fn execute(package_dir: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
+fn run<P>(path: P, package: &str, quiet: bool) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let src = fs::read_to_string(path)?;
+
+    let package = src
+        .split("//# ---")
+        .map(|x| Package::from(x))
+        .filter(|x| x.name == package)
+        .next()
+        .expect("Package not found in file.");
+
+    println!(
+        "{}",
+        &format!("Start {} package", &package.name)
+            .bright_green()
+            .bold()
+    );
+
+    let cache_dir = env::temp_dir().join("pit").join(&package.name);
+
+    let identity = package.gen_identity();
+    let cache_identity_path = cache_dir.join("identity_hash.toml");
+    // If there is no change in iether src or toml, use the executable file on the cache.
+    if let Ok(cache_identity) = fs::read(&cache_identity_path) {
+        let cache_identity: Identity = toml::from_slice(&cache_identity)?;
+        if identity.hash == cache_identity.hash {
+            let cache_execute_path = cache_dir.join("target").join("debug").join(&package.name);
+            let exit_status = process::Command::new(cache_execute_path).spawn()?.wait()?;
+
+            if exit_status.success() {
+                return Ok(());
+            }
+        }
+    }
+
+    let temp_dir = TempDir::new("pit")?;
+
+    let package_dir = temp_dir.path().join(&package.name);
+    fs::create_dir(&package_dir)?;
+
+    create_toml(&package_dir, &package.toml)?;
+    create_src(&package_dir, &package.src)?;
+
+    let package_target_dir = package_dir.join("target");
+    let cache_target_dir = cache_dir.join("target");
+    fs::create_dir_all(&cache_target_dir)?;
+    // Restore target directory from cache.
+    fs::rename(&cache_target_dir, &package_target_dir)?;
+
+    build_package(&package_dir, quiet)?;
+    execute(&package_dir, &package.name)?;
+
+    if cache_target_dir.exists() {
+        bail!("Failed to handle cache.")
+    }
+    // Store target directory in cache.
+    fs::rename(package_target_dir, cache_target_dir)?;
+
+    // Store the hash generated from src and toml.
+    let identity = toml::to_string(&Identity {
+        name: identity.name,
+        hash: identity.hash,
+    })?;
+    fs::write(cache_identity_path, identity)?;
+
+    Ok(())
+}
+
 fn run_all<P>(path: P, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
@@ -252,18 +322,16 @@ enum SubCommands {
     /// Run all package in file
     Run {
         file_path: String,
+        /// Run only the specified package
+        package: Option<String>,
         /// Do not print cargo log messages
         #[arg(short, long)]
         quiet: bool,
     },
     /// List all packages in the given file
-    List {
-        file_path: String,
-    },
+    List { file_path: String },
     /// Add an empty package on top in the given file
-    Add {
-        file_path: String,
-    },
+    Add { file_path: String },
     /// Remove everything in the cache directory
     Clean,
 }
@@ -273,8 +341,16 @@ fn main() -> Result<()> {
 
     if let Some(command) = args.command {
         match command {
-            SubCommands::Run { file_path, quiet } => {
-                run_all(file_path, quiet)?;
+            SubCommands::Run {
+                file_path,
+                package,
+                quiet,
+            } => {
+                if let Some(package) = package {
+                    run(file_path, &package, quiet)?;
+                } else {
+                    run_all(file_path, quiet)?;
+                }
             }
             SubCommands::List { file_path } => {
                 list_packages(file_path)?;

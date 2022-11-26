@@ -172,6 +172,22 @@ where
     Ok(())
 }
 
+fn list_packages<P>(path: P) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let src = fs::read_to_string(path)?;
+    let names = src
+        .split("//# ---")
+        .map(|x| Package::from(x))
+        .map(|x| x.name)
+        .collect::<Vec<String>>()
+        .join("\n");
+    println!("{}", names);
+
+    Ok(())
+}
+
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 struct Args {
@@ -189,6 +205,9 @@ enum SubCommands {
         #[arg(short, long)]
         quiet: bool,
     },
+    List {
+        file_path: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -198,6 +217,9 @@ fn main() -> Result<()> {
         match command {
             SubCommands::Run { file_path, quiet } => {
                 run_all(file_path, quiet)?;
+            }
+            SubCommands::List { file_path } => {
+                list_packages(file_path)?;
             }
         }
     } else {

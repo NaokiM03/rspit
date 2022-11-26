@@ -80,9 +80,12 @@ fn create_src(package_dir: &Path, src: &str) -> Result<()> {
     Ok(())
 }
 
-fn build_package(package_dir: &Path) -> Result<()> {
+fn build_package(package_dir: &Path, quiet: bool) -> Result<()> {
     let mut command = process::Command::new("cargo");
     command.arg("build");
+    if quiet {
+        command.arg("--quiet");
+    }
     let exit_status = command.current_dir(&package_dir).spawn()?.wait()?;
 
     if !exit_status.success() {
@@ -103,7 +106,7 @@ fn execute(package_dir: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn run_all<P>(path: P) -> Result<()>
+fn run_all<P>(path: P, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -149,7 +152,7 @@ where
         // Restore target directory from cache.
         fs::rename(&cache_target_dir, &package_target_dir)?;
 
-        build_package(&package_dir)?;
+        build_package(&package_dir, quiet)?;
         execute(&package_dir, &package.name)?;
 
         if cache_target_dir.exists() {
@@ -180,7 +183,12 @@ struct Args {
 enum SubCommands {
     /// Run all package in file
     #[command(about)]
-    Run { file_path: String },
+    Run {
+        file_path: String,
+        /// Do not print cargo log messages
+        #[arg(short, long)]
+        quiet: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -188,8 +196,8 @@ fn main() -> Result<()> {
 
     if let Some(command) = args.command {
         match command {
-            SubCommands::Run { file_path } => {
-                run_all(file_path)?;
+            SubCommands::Run { file_path, quiet } => {
+                run_all(file_path, quiet)?;
             }
         }
     } else {

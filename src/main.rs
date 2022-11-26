@@ -4,6 +4,7 @@ use anyhow::{bail, Result};
 use serde_derive::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tempdir::TempDir;
+use tiny_ansi::TinyAnsi;
 
 #[derive(Debug)]
 struct Project {
@@ -107,6 +108,13 @@ fn main() -> Result<()> {
     let temp_dir = TempDir::new("pit")?;
     for package in src.split("//# ---") {
         let project = Project::from(package);
+
+        println!(
+            "{}",
+            &format!("Start {} package", &project.name)
+                .bright_green()
+                .bold()
+        );
 
         let cache_dir = env::temp_dir().join("pit").join(&project.name);
 

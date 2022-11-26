@@ -241,7 +241,7 @@ fn clean_cache_dir() -> Result<()> {
 }
 
 #[derive(Debug, Parser)]
-#[command(author, version, about)]
+#[command(name = "pit", author, version, about)]
 struct Args {
     #[command(subcommand)]
     command: Option<SubCommands>,

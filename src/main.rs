@@ -2,6 +2,7 @@ use std::{env, fs, path::Path, process};
 
 use anyhow::{bail, Result};
 use clap::{CommandFactory, Parser, Subcommand};
+use rand::{seq::SliceRandom, thread_rng};
 use serde_derive::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tempdir::TempDir;
@@ -188,6 +189,45 @@ where
     Ok(())
 }
 
+fn add_package<P>(path: P) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let src = fs::read_to_string(&path)?;
+
+    let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
+        .as_bytes()
+        .choose_multiple(&mut thread_rng(), 7)
+        .cloned()
+        .map(char::from)
+        .collect();
+    let name = format!("tmp-{}", random_str);
+
+    let content = format!(
+        r###"
+//# [package]
+//# name = "{}"
+//# version = "0.1.0"
+//# edition = "2021"
+//#
+//# [dependencies]
+//#
+
+fn main() {{
+}}
+
+//# ---
+
+{}"###,
+        name, src
+    );
+    let content = content.trim_start();
+
+    fs::write(path, content)?;
+
+    Ok(())
+}
+
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 struct Args {
@@ -208,6 +248,9 @@ enum SubCommands {
     List {
         file_path: String,
     },
+    Add {
+        file_path: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -220,6 +263,9 @@ fn main() -> Result<()> {
             }
             SubCommands::List { file_path } => {
                 list_packages(file_path)?;
+            }
+            SubCommands::Add { file_path } => {
+                add_package(file_path)?;
             }
         }
     } else {

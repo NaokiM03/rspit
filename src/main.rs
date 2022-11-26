@@ -1,6 +1,8 @@
 use std::{env, fs, path::Path, process};
 
 use anyhow::{bail, Result};
+use serde_derive::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tempdir::TempDir;
 
 #[derive(Debug)]
@@ -39,6 +41,22 @@ impl From<&str> for Project {
 
         Project { name, toml, src }
     }
+}
+
+impl Project {
+    fn gen_hash(&self) -> String {
+        let hash = Sha256::new()
+            .chain_update(&self.toml)
+            .chain_update(&self.src)
+            .finalize();
+        format!("{:x}", hash)
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Identity {
+    name: String,
+    hash: String,
 }
 
 fn create_toml(project_dir: &Path, toml: &str) -> Result<()> {
@@ -87,6 +105,23 @@ fn main() -> Result<()> {
     for package in src.split("//# ---") {
         let project = Project::from(package);
 
+        let cache_dir = env::temp_dir().join("pit").join(&project.name);
+
+        let hash = project.gen_hash();
+        let identity_path = cache_dir.join("identity_hash.toml");
+        // If there is no change in iether src or toml, use the executable file on the cache.
+        if let Ok(identity) = fs::read(&identity_path) {
+            let identity: Identity = toml::from_slice(&identity)?;
+            if identity.hash == hash {
+                let cache_execute_path = cache_dir.join("target").join("debug").join(&project.name);
+                let exit_status = process::Command::new(cache_execute_path).spawn()?.wait()?;
+
+                if exit_status.success() {
+                    continue;
+                }
+            }
+        }
+
         let project_dir = temp_dir.path().join(&project.name);
         fs::create_dir(&project_dir)?;
 
@@ -94,10 +129,7 @@ fn main() -> Result<()> {
         create_src(&project_dir, &project.src)?;
 
         let project_target_dir = project_dir.join("target");
-        let cache_target_dir = env::temp_dir()
-            .join("pit")
-            .join(&project.name)
-            .join("target");
+        let cache_target_dir = cache_dir.join("target");
         fs::create_dir_all(&cache_target_dir)?;
         // Restore target directory from cache.
         fs::rename(&cache_target_dir, &project_target_dir)?;
@@ -110,6 +142,13 @@ fn main() -> Result<()> {
         }
         // Store target directory in cache.
         fs::rename(project_target_dir, cache_target_dir)?;
+
+        // Store the hash generated from src and toml.
+        let identity = toml::to_string(&Identity {
+            name: project.name,
+            hash,
+        })?;
+        fs::write(identity_path, identity)?;
     }
 
     Ok(())

@@ -257,12 +257,15 @@ enum SubCommands {
         #[arg(short, long)]
         quiet: bool,
     },
+    /// List all packages in the given file
     List {
         file_path: String,
     },
+    /// Add an empty package on top in the given file
     Add {
         file_path: String,
     },
+    /// Remove everything in the cache directory
     Clean,
 }
 

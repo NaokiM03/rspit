@@ -165,11 +165,11 @@ fn run(package: &Package, quiet: bool) -> Result<()> {
     Ok(())
 }
 
-fn run_specified_package<P>(path: P, package: &str, quiet: bool) -> Result<()>
+fn run_specified_package<P>(file_path: P, package: &str, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
-    let src = fs::read_to_string(path)?;
+    let src = fs::read_to_string(file_path)?;
 
     let package = src
         .split("//# ---")
@@ -182,11 +182,11 @@ where
     Ok(())
 }
 
-fn run_all<P>(path: P, quiet: bool) -> Result<()>
+fn run_all<P>(file_path: P, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
-    let src = fs::read_to_string(path)?;
+    let src = fs::read_to_string(file_path)?;
 
     for package in src.split("//# ---") {
         let package = Package::from(package);
@@ -196,11 +196,11 @@ where
     Ok(())
 }
 
-fn list_packages<P>(path: P) -> Result<()>
+fn list_packages<P>(file_path: P) -> Result<()>
 where
     P: AsRef<Path>,
 {
-    let src = fs::read_to_string(path)?;
+    let src = fs::read_to_string(file_path)?;
     let names = src
         .split("//# ---")
         .map(|x| Package::from(x))
@@ -212,11 +212,11 @@ where
     Ok(())
 }
 
-fn add_package<P>(path: P) -> Result<()>
+fn add_package<P>(file_path: P) -> Result<()>
 where
     P: AsRef<Path>,
 {
-    let src = fs::read_to_string(&path)?;
+    let src = fs::read_to_string(&file_path)?;
 
     let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
         .as_bytes()
@@ -246,7 +246,7 @@ fn main() {{
     );
     let content = content.trim_start();
 
-    fs::write(path, content)?;
+    fs::write(file_path, content)?;
 
     Ok(())
 }

@@ -349,6 +349,7 @@ enum SubCommands {
     Run {
         file_path: String,
         /// Run only the specified package
+        #[arg(short, long)]
         package: Option<String>,
         /// Do not print cargo log messages
         #[arg(short, long)]

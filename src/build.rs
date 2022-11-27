@@ -1,4 +1,4 @@
-use std::{env, fs, path::Path, process};
+use std::{fs, path::Path, process};
 
 use anyhow::{bail, Result};
 use tempdir::TempDir;
@@ -48,17 +48,14 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
             .bold()
     );
 
-    let temp_dir = TempDir::new("pit")?;
-    let cache_dir = env::temp_dir().join("pit").join(&package.name);
-
-    let package_dir = temp_dir.path().join(&package.name);
+    let package_dir = TempDir::new("pit")?.path().join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;
     create_src(&package_dir, &package.src)?;
 
     let package_target_dir = package_dir.join("target");
-    let cache_target_dir = cache_dir.join("target");
+    let cache_target_dir = cache::cache_dir(&package.name).join("target");
 
     cache::restore(&cache_target_dir, &package_target_dir)?;
     cargo_build(&package_dir, release, quiet)?;
@@ -70,7 +67,7 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
         return Ok(());
     }
 
-    cache::write_identity_hash(&package, &cache_dir)?;
+    cache::write_identity_hash(&package)?;
 
     Ok(())
 }

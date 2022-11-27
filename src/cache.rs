@@ -1,4 +1,7 @@
-use std::{fs, path::Path};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{bail, Result};
 use serde_derive::{Deserialize, Serialize};
@@ -29,8 +32,12 @@ pub(crate) fn store(package_target_dir: &Path, cache_target_dir: &Path) -> Resul
     Ok(())
 }
 
-pub(crate) fn write_identity_hash(package: &Package, cache_dir: &Path) -> Result<()> {
-    let cache_identity_path = cache_dir.join("identity_hash.toml");
+pub(crate) fn cache_dir(package_name: &str) -> PathBuf {
+    env::temp_dir().join("pit").join(package_name)
+}
+
+pub(crate) fn write_identity_hash(package: &Package) -> Result<()> {
+    let cache_identity_path = cache_dir(&package.name).join("identity_hash.toml");
     let identity = package.gen_identity();
     // Store the hash generated from src and toml.
     let identity = toml::to_string(&Identity {
@@ -40,4 +47,16 @@ pub(crate) fn write_identity_hash(package: &Package, cache_dir: &Path) -> Result
     fs::write(cache_identity_path, identity)?;
 
     Ok(())
+}
+
+pub(crate) fn check_identity_hash(package: &Package) -> Option<()> {
+    let identity = package.gen_identity();
+    let cache_identity_path = cache_dir(&package.name).join("identity_hash.toml");
+    if let Ok(cache_identity) = fs::read(&cache_identity_path) {
+        let cache_identity: Identity = toml::from_slice(&cache_identity).unwrap();
+        if identity.hash == cache_identity.hash {
+            return Some(());
+        }
+    }
+    None
 }

@@ -41,12 +41,14 @@ fn cargo_build(package_dir: &Path, release: bool, quiet: bool) -> Result<()> {
 }
 
 pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()> {
-    println!(
-        "{}",
-        &format!("Build {} package", &package.name)
-            .bright_green()
-            .bold()
-    );
+    if !quiet {
+        println!(
+            "{}",
+            &format!("Build {} package", &package.name)
+                .bright_green()
+                .bold()
+        );
+    }
 
     let package_dir = TempDir::new("pit")?.path().join(&package.name);
     fs::create_dir_all(&package_dir)?;

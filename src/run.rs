@@ -22,12 +22,14 @@ fn execute(package_name: &str) -> Result<()> {
 }
 
 fn run(package: &Package, quiet: bool) -> Result<()> {
-    println!(
-        "{}",
-        &format!("Start {} package", &package.name)
-            .bright_green()
-            .bold()
-    );
+    if !quiet {
+        println!(
+            "{}",
+            &format!("Run {} package", &package.name)
+                .bright_green()
+                .bold()
+        );
+    }
 
     // If there is no change in iether src or toml, use the executable file on the cache.
     if cache::check_identity_hash(&package).is_some() {

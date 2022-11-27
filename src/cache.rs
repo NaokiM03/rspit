@@ -1,0 +1,43 @@
+use std::{fs, path::Path};
+
+use anyhow::{bail, Result};
+use serde_derive::{Deserialize, Serialize};
+
+use crate::package::Package;
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct Identity {
+    pub(crate) name: String,
+    pub(crate) hash: String,
+}
+
+pub(crate) fn restore(cache_target_dir: &Path, package_target_dir: &Path) -> Result<()> {
+    fs::create_dir_all(&cache_target_dir)?;
+    // Restore target directory from cache.
+    fs::rename(&cache_target_dir, &package_target_dir)?;
+
+    Ok(())
+}
+
+pub(crate) fn store(package_target_dir: &Path, cache_target_dir: &Path) -> Result<()> {
+    if cache_target_dir.exists() {
+        bail!("Failed to handle cache.")
+    }
+    // Store target directory in cache.
+    fs::rename(package_target_dir, cache_target_dir)?;
+
+    Ok(())
+}
+
+pub(crate) fn write_identity_hash(package: &Package, cache_dir: &Path) -> Result<()> {
+    let cache_identity_path = cache_dir.join("identity_hash.toml");
+    let identity = package.gen_identity();
+    // Store the hash generated from src and toml.
+    let identity = toml::to_string(&Identity {
+        name: identity.name,
+        hash: identity.hash,
+    })?;
+    fs::write(cache_identity_path, identity)?;
+
+    Ok(())
+}

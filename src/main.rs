@@ -107,19 +107,7 @@ fn execute(package_dir: &Path, name: &str) -> Result<()> {
     Ok(())
 }
 
-fn run<P>(path: P, package: &str, quiet: bool) -> Result<()>
-where
-    P: AsRef<Path>,
-{
-    let src = fs::read_to_string(path)?;
-
-    let package = src
-        .split("//# ---")
-        .map(|x| Package::from(x))
-        .filter(|x| x.name == package)
-        .next()
-        .expect("Package not found in file.");
-
+fn run(package: &Package, quiet: bool) -> Result<()> {
     println!(
         "{}",
         &format!("Start {} package", &package.name)
@@ -177,67 +165,32 @@ where
     Ok(())
 }
 
+fn run_specified_package<P>(path: P, package: &str, quiet: bool) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let src = fs::read_to_string(path)?;
+
+    let package = src
+        .split("//# ---")
+        .map(|x| Package::from(x))
+        .filter(|x| x.name == package)
+        .next()
+        .expect("Package not found in file.");
+    run(&package, quiet)?;
+
+    Ok(())
+}
+
 fn run_all<P>(path: P, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
     let src = fs::read_to_string(path)?;
 
-    let temp_dir = TempDir::new("pit")?;
     for package in src.split("//# ---") {
         let package = Package::from(package);
-
-        println!(
-            "{}",
-            &format!("Start {} package", &package.name)
-                .bright_green()
-                .bold()
-        );
-
-        let cache_dir = env::temp_dir().join("pit").join(&package.name);
-
-        let identity = package.gen_identity();
-        let cache_identity_path = cache_dir.join("identity_hash.toml");
-        // If there is no change in iether src or toml, use the executable file on the cache.
-        if let Ok(cache_identity) = fs::read(&cache_identity_path) {
-            let cache_identity: Identity = toml::from_slice(&cache_identity)?;
-            if identity.hash == cache_identity.hash {
-                let cache_execute_path = cache_dir.join("target").join("debug").join(&package.name);
-                let exit_status = process::Command::new(cache_execute_path).spawn()?.wait()?;
-
-                if exit_status.success() {
-                    continue;
-                }
-            }
-        }
-
-        let package_dir = temp_dir.path().join(&package.name);
-        fs::create_dir(&package_dir)?;
-
-        create_toml(&package_dir, &package.toml)?;
-        create_src(&package_dir, &package.src)?;
-
-        let package_target_dir = package_dir.join("target");
-        let cache_target_dir = cache_dir.join("target");
-        fs::create_dir_all(&cache_target_dir)?;
-        // Restore target directory from cache.
-        fs::rename(&cache_target_dir, &package_target_dir)?;
-
-        build_package(&package_dir, quiet)?;
-        execute(&package_dir, &package.name)?;
-
-        if cache_target_dir.exists() {
-            bail!("Failed to handle cache.")
-        }
-        // Store target directory in cache.
-        fs::rename(package_target_dir, cache_target_dir)?;
-
-        // Store the hash generated from src and toml.
-        let identity = toml::to_string(&Identity {
-            name: identity.name,
-            hash: identity.hash,
-        })?;
-        fs::write(cache_identity_path, identity)?;
+        run(&package, quiet)?;
     }
 
     Ok(())
@@ -347,7 +300,7 @@ fn main() -> Result<()> {
                 quiet,
             } => {
                 if let Some(package) = package {
-                    run(file_path, &package, quiet)?;
+                    run_specified_package(file_path, &package, quiet)?;
                 } else {
                     run_all(file_path, quiet)?;
                 }

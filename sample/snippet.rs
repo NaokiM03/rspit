@@ -5,6 +5,9 @@
 //#
 //# [dependencies]
 //# rand = "*"
+//#
+//# [profile.release]
+//# lto = true
 
 use rand::prelude::*;
 
@@ -22,6 +25,9 @@ fn main() {
 //#
 //# [dependencies]
 //# serde_json = "*"
+//#
+//# [profile.release]
+//# lto = true
 
 use serde_json::{Result, Value};
 

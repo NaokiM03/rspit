@@ -81,9 +81,12 @@ fn create_src(package_dir: &Path, src: &str) -> Result<()> {
     Ok(())
 }
 
-fn build_package(package_dir: &Path, quiet: bool) -> Result<()> {
+fn build_package(package_dir: &Path, release: bool, quiet: bool) -> Result<()> {
     let mut command = process::Command::new("cargo");
     command.arg("build");
+    if release {
+        command.arg("--release");
+    }
     if quiet {
         command.arg("--quiet");
     }
@@ -146,7 +149,7 @@ fn run(package: &Package, quiet: bool) -> Result<()> {
     // Restore target directory from cache.
     fs::rename(&cache_target_dir, &package_target_dir)?;
 
-    build_package(&package_dir, quiet)?;
+    build_package(&package_dir, false, quiet)?;
     execute(&package_dir, &package.name)?;
 
     if cache_target_dir.exists() {
@@ -196,7 +199,7 @@ where
     Ok(())
 }
 
-fn build(package: &Package, quiet: bool) -> Result<()> {
+fn build(package: &Package, release: bool, quiet: bool) -> Result<()> {
     println!(
         "{}",
         &format!("Build {} package", &package.name)
@@ -219,13 +222,19 @@ fn build(package: &Package, quiet: bool) -> Result<()> {
     // Restore target directory from cache.
     fs::rename(&cache_target_dir, &package_target_dir)?;
 
-    build_package(&package_dir, quiet)?;
+    build_package(&package_dir, release, quiet)?;
 
     if cache_target_dir.exists() {
         bail!("Failed to handle cache.")
     }
     // Store target directory in cache.
     fs::rename(package_target_dir, cache_target_dir)?;
+
+    // The hash is not stored at release build time.
+    // This is because the `run` command always uses the debug build.
+    if release {
+        return Ok(())
+    }
 
     let cache_identity_path = cache_dir.join("identity_hash.toml");
     let identity = package.gen_identity();
@@ -239,7 +248,7 @@ fn build(package: &Package, quiet: bool) -> Result<()> {
     Ok(())
 }
 
-fn build_specified_package<P>(file_path: P, package: &str, quiet: bool) -> Result<()>
+fn build_specified_package<P>(file_path: P, package: &str, release: bool, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -251,12 +260,12 @@ where
         .filter(|x| x.name == package)
         .next()
         .expect("Package not found in file.");
-    build(&package, quiet)?;
+    build(&package, release, quiet)?;
 
     Ok(())
 }
 
-fn build_all<P>(file_path: P, quiet: bool) -> Result<()>
+fn build_all<P>(file_path: P, release: bool, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -264,7 +273,7 @@ where
 
     for package in src.split("//# ---") {
         let package = Package::from(package);
-        build(&package, quiet)?;
+        build(&package, release, quiet)?;
     }
 
     Ok(())
@@ -309,6 +318,8 @@ where
 //#
 //# [dependencies]
 //#
+//# [profile.release]
+//# lto = true
 
 fn main() {{
 }}
@@ -361,6 +372,9 @@ enum SubCommands {
         /// Build only the specified package
         #[arg(short, long)]
         package: Option<String>,
+        /// Build in release mode with optimizations
+        #[arg(short, long)]
+        release: bool,
         /// Do not print cargo log messages
         #[arg(short, long)]
         quiet: bool,
@@ -392,12 +406,13 @@ fn main() -> Result<()> {
             SubCommands::Build {
                 file_path,
                 package,
+                release,
                 quiet,
             } => {
                 if let Some(package) = package {
-                    build_specified_package(file_path, &package, quiet)?;
+                    build_specified_package(file_path, &package, release, quiet)?;
                 } else {
-                    build_all(file_path, quiet)?;
+                    build_all(file_path, release, quiet)?;
                 }
             }
             SubCommands::List { file_path } => {

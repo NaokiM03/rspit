@@ -196,6 +196,80 @@ where
     Ok(())
 }
 
+fn build(package: &Package, quiet: bool) -> Result<()> {
+    println!(
+        "{}",
+        &format!("Build {} package", &package.name)
+            .bright_green()
+            .bold()
+    );
+
+    let temp_dir = TempDir::new("pit")?;
+    let cache_dir = env::temp_dir().join("pit").join(&package.name);
+
+    let package_dir = temp_dir.path().join(&package.name);
+    fs::create_dir(&package_dir)?;
+
+    create_toml(&package_dir, &package.toml)?;
+    create_src(&package_dir, &package.src)?;
+
+    let package_target_dir = package_dir.join("target");
+    let cache_target_dir = cache_dir.join("target");
+    fs::create_dir_all(&cache_target_dir)?;
+    // Restore target directory from cache.
+    fs::rename(&cache_target_dir, &package_target_dir)?;
+
+    build_package(&package_dir, quiet)?;
+
+    if cache_target_dir.exists() {
+        bail!("Failed to handle cache.")
+    }
+    // Store target directory in cache.
+    fs::rename(package_target_dir, cache_target_dir)?;
+
+    let cache_identity_path = cache_dir.join("identity_hash.toml");
+    let identity = package.gen_identity();
+    // Store the hash generated from src and toml.
+    let identity = toml::to_string(&Identity {
+        name: identity.name,
+        hash: identity.hash,
+    })?;
+    fs::write(cache_identity_path, identity)?;
+
+    Ok(())
+}
+
+fn build_specified_package<P>(file_path: P, package: &str, quiet: bool) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let src = fs::read_to_string(file_path)?;
+
+    let package = src
+        .split("//# ---")
+        .map(|x| Package::from(x))
+        .filter(|x| x.name == package)
+        .next()
+        .expect("Package not found in file.");
+    build(&package, quiet)?;
+
+    Ok(())
+}
+
+fn build_all<P>(file_path: P, quiet: bool) -> Result<()>
+where
+    P: AsRef<Path>,
+{
+    let src = fs::read_to_string(file_path)?;
+
+    for package in src.split("//# ---") {
+        let package = Package::from(package);
+        build(&package, quiet)?;
+    }
+
+    Ok(())
+}
+
 fn list_packages<P>(file_path: P) -> Result<()>
 where
     P: AsRef<Path>,
@@ -280,6 +354,16 @@ enum SubCommands {
         #[arg(short, long)]
         quiet: bool,
     },
+    /// Build all package in file
+    Build {
+        file_path: String,
+        /// Build only the specified package
+        #[arg(short, long)]
+        package: Option<String>,
+        /// Do not print cargo log messages
+        #[arg(short, long)]
+        quiet: bool,
+    },
     /// List all packages in the given file
     List { file_path: String },
     /// Add an empty package on top in the given file
@@ -302,6 +386,17 @@ fn main() -> Result<()> {
                     run_specified_package(file_path, &package, quiet)?;
                 } else {
                     run_all(file_path, quiet)?;
+                }
+            }
+            SubCommands::Build {
+                file_path,
+                package,
+                quiet,
+            } => {
+                if let Some(package) = package {
+                    build_specified_package(file_path, &package, quiet)?;
+                } else {
+                    build_all(file_path, quiet)?;
                 }
             }
             SubCommands::List { file_path } => {

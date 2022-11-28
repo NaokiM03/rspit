@@ -2,6 +2,12 @@
 name = "rspit"
 version = "0.1.0"
 edition = "2021"
+authors = ["NaokiM03"]
+description = "A command-line tool to run Rust snippet."
+keywords = ["cli", "cargo", "tool", "command-line", "script"]
+repository = "https://github.com/NaokiM03/rspit"
+readme = "README.md"
+license = "MIT"
 
 [dependencies]
 toml = "0.5.9"

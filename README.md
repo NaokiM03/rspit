@@ -25,6 +25,17 @@ There is a simple cache system, [as described below](https://github.com/NaokiM03
 
   </details>
 
+- A large number of packages in one workspace makes rust-analyzer heavy. rust-analyzer's functionality is limited when opening single file, but it is very lightweight
+
+  - However, I believe it has sufficient functionality to write a snippet because it can complement the standard library
+
+  <details>
+  <summary>rust-analyzer completion</summary>
+
+  ![](rust-analyzer-completion.png)
+
+  </details>
+
 ## Usage
 
 ```sh
@@ -108,8 +119,6 @@ Options:
 - The `target` directory is cached
 - Always build **in debug mode** when `run` and `build` are executed
 - If the source files have not been modified at the time of `run` execution and debug mode artifacts are present, the binary is executed directly without building
-
-
 
 ## Related projects
 

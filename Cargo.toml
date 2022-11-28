@@ -23,3 +23,6 @@ toml = "0.5.9"
 [[bin]]
 name = "pit"
 path = "src/main.rs"
+
+[profile.release]
+lto = true

@@ -11,8 +11,7 @@ pub(crate) fn run_specified_package<P: AsRef<Path>>(
 ) -> Result<()> {
     packages_from_path(file_path)
         .iter()
-        .filter(|x| x.name == package)
-        .next()
+        .find(|x| x.name == package)
         .iter()
         .for_each(|package| run(&package, quiet).expect("Failed to run"));
 

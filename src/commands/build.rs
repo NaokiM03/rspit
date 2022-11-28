@@ -11,8 +11,7 @@ pub(crate) fn build_specified_package<P: AsRef<Path>>(
 ) -> Result<()> {
     packages_from_path(file_path)
         .iter()
-        .filter(|x| x.name == package)
-        .next()
+        .find(|x| x.name == package)
         .iter()
         .for_each(|package| build(&package, false, quiet).expect("Failed to build."));
 

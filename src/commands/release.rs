@@ -12,8 +12,7 @@ pub(crate) fn release_specified_package<P: AsRef<Path>, Q: AsRef<Path>>(
 ) -> Result<()> {
     packages_from_path(file_path)
         .iter()
-        .filter(|x| x.name == package)
-        .next()
+        .find(|x| x.name == package)
         .iter()
         .for_each(|package| release(&package, &out_dir, quiet).expect("Failed to release."));
 

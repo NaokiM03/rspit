@@ -6,7 +6,7 @@ use std::{
 use anyhow::{bail, Result};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::package::Package;
+use super::package::Package;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Identity {

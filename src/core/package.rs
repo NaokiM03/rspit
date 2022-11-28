@@ -1,6 +1,6 @@
 use sha2::{Digest, Sha256};
 
-use crate::cache::Identity;
+use super::cache::Identity;
 
 #[derive(Debug)]
 pub(crate) struct Package {

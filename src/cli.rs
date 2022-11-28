@@ -1,12 +1,12 @@
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 
-use crate::add::add_package;
-use crate::build::{build_all, build_specified_package};
-use crate::clean::clean_cache_dir;
-use crate::list::list_packages;
-use crate::release::{release_all, release_specified_package};
-use crate::run::{run_all, run_specified_package};
+use crate::commands::add_package;
+use crate::commands::clean_cache_dir;
+use crate::commands::list_packages;
+use crate::commands::{build_all, build_specified_package};
+use crate::commands::{release_all, release_specified_package};
+use crate::commands::{run_all, run_specified_package};
 
 #[derive(Debug, Parser)]
 #[command(name = "pit", author, version, about)]

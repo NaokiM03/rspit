@@ -1,10 +1,13 @@
-use std::{fs, path::Path, process};
+use std::{env, fs, path::Path, process};
 
 use anyhow::{bail, Result};
 use tempdir::TempDir;
 use tiny_ansi::TinyAnsi;
 
-use crate::{cache, package::Package};
+mod cache;
+mod package;
+
+pub(crate) use package::Package;
 
 fn create_toml(package_dir: &Path, toml: &str) -> Result<()> {
     let toml_file = package_dir.join("Cargo.toml");
@@ -74,33 +77,73 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
     Ok(())
 }
 
-pub(crate) fn build_specified_package<P>(file_path: P, package: &str, quiet: bool) -> Result<()>
-where
-    P: AsRef<Path>,
-{
-    let src = fs::read_to_string(file_path)?;
+fn execute(package_name: &str) -> Result<()> {
+    let execute_path = env::temp_dir()
+        .join("pit")
+        .join(&package_name)
+        .join("target")
+        .join("debug")
+        .join(package_name);
+    let exit_status = process::Command::new(execute_path).spawn()?.wait()?;
 
-    let package = src
-        .split("//# ---")
-        .map(|x| Package::from(x))
-        .filter(|x| x.name == package)
-        .next()
-        .expect("Package not found in file.");
-    build(&package, false, quiet)?;
+    if !exit_status.success() {
+        bail!("Failed to execute.");
+    }
 
     Ok(())
 }
 
-pub(crate) fn build_all<P>(file_path: P, quiet: bool) -> Result<()>
-where
-    P: AsRef<Path>,
-{
-    let src = fs::read_to_string(file_path)?;
-
-    for package in src.split("//# ---") {
-        let package = Package::from(package);
-        build(&package, false, quiet)?;
+pub(crate) fn run(package: &Package, quiet: bool) -> Result<()> {
+    if !quiet {
+        println!(
+            "{}",
+            &format!("Run {} package", &package.name)
+                .bright_green()
+                .bold()
+        );
     }
+
+    // If there is no change in either src or toml, use the executable file on the cache.
+    if cache::check_identity_hash(&package).is_some() {
+        return execute(&package.name);
+    }
+
+    build(&package, false, quiet)?;
+    execute(&package.name)?;
+
+    Ok(())
+}
+
+fn distribute<P: AsRef<Path>>(package_name: &str, out_dir: P) -> Result<()> {
+    let file_name = if cfg!(windows) {
+        format!("{}.exe", package_name)
+    } else {
+        package_name.to_owned()
+    };
+    let execute_path = env::temp_dir()
+        .join("pit")
+        .join(&package_name)
+        .join("target")
+        .join("release")
+        .join(&file_name);
+    let target_path = out_dir.as_ref().join(&file_name);
+    fs::copy(&execute_path, target_path)?;
+
+    Ok(())
+}
+
+pub(crate) fn release<P: AsRef<Path>>(package: &Package, out_dir: P, quiet: bool) -> Result<()> {
+    if !quiet {
+        println!(
+            "{}",
+            &format!("Release {} package", &package.name)
+                .bright_green()
+                .bold()
+        );
+    }
+
+    build(&package, true, quiet)?;
+    distribute(&package.name, out_dir)?;
 
     Ok(())
 }

@@ -2,7 +2,7 @@ use std::{fs, path::Path};
 
 use anyhow::Result;
 
-use crate::package::Package;
+use crate::core::Package;
 
 pub(crate) fn list_packages<P>(file_path: P) -> Result<()>
 where

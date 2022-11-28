@@ -8,7 +8,7 @@ Run Rust snippet containing multiple packages. Embed `Cargo.toml` as a comment t
 
 There is a simple cache system, [as described below](https://github.com/NaokiM03/rspit#note).
 
-![](demo.gif)
+![](https://raw.githubusercontent.com/NaokiM03/rspit/c53c405db3acf75ea8ab98d807064d5248379c3d/demo.gif?token=GHSAT0AAAAAABQZZVSH5RNAFETNMJSC4RBMY4FFSXA)
 
 ## Motivation
 
@@ -21,7 +21,7 @@ There is a simple cache system, [as described below](https://github.com/NaokiM03
   <details>
   <summary>Snippet on VSCode</summary>
 
-  ![](snippet.png)
+  ![](https://raw.githubusercontent.com/NaokiM03/rspit/c53c405db3acf75ea8ab98d807064d5248379c3d/snippet.png?token=GHSAT0AAAAAABQZZVSH3M55TYCHMLZY3LH2Y4FFTQA)
 
   </details>
 
@@ -32,7 +32,7 @@ There is a simple cache system, [as described below](https://github.com/NaokiM03
   <details>
   <summary>rust-analyzer completion</summary>
 
-  ![](rust-analyzer-completion.png)
+  ![](https://raw.githubusercontent.com/NaokiM03/rspit/c53c405db3acf75ea8ab98d807064d5248379c3d/rust-analyzer-completion.png?token=GHSAT0AAAAAABQZZVSGXH67K6XSSWEK3AWAY4FFT5Q)
 
   </details>
 

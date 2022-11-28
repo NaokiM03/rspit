@@ -19,6 +19,16 @@ pub(crate) fn packages_from_path<P: AsRef<Path>>(file_path: P) -> Vec<Package> {
         .collect()
 }
 
+fn random_name() -> String {
+    let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
+        .as_bytes()
+        .choose_multiple(&mut thread_rng(), 7)
+        .cloned()
+        .map(char::from)
+        .collect();
+    format!("tmp-{}", random_str)
+}
+
 // Build
 
 fn create_toml<P: AsRef<Path>>(package_dir: P, toml: &str) -> Result<()> {
@@ -145,14 +155,7 @@ pub(crate) fn release<P: AsRef<Path>>(package: &Package, out_dir: P, quiet: bool
 // Init
 
 pub(crate) fn init<P: AsRef<Path>>(file_path: P) -> Result<()> {
-    let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
-        .as_bytes()
-        .choose_multiple(&mut thread_rng(), 7)
-        .cloned()
-        .map(char::from)
-        .collect();
-    let name = format!("tmp-{}", random_str);
-
+    let name = random_name();
     let content = format!(
         r###"
 //# [package]
@@ -193,14 +196,7 @@ pub(crate) fn list<P: AsRef<Path>>(file_path: P) -> Result<()> {
 pub(crate) fn add<P: AsRef<Path>>(file_path: P) -> Result<()> {
     let src = fs::read_to_string(&file_path)?;
 
-    let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
-        .as_bytes()
-        .choose_multiple(&mut thread_rng(), 7)
-        .cloned()
-        .map(char::from)
-        .collect();
-    let name = format!("tmp-{}", random_str);
-
+    let name = random_name();
     let content = format!(
         r###"
 //# [package]

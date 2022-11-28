@@ -5,6 +5,7 @@ use crate::add::add_package;
 use crate::build::{build_all, build_specified_package};
 use crate::clean::clean_cache_dir;
 use crate::list::list_packages;
+use crate::release::{release_all, release_specified_package};
 use crate::run::{run_all, run_specified_package};
 
 #[derive(Debug, Parser)]
@@ -35,6 +36,20 @@ enum SubCommands {
         /// Build in release mode with optimizations
         #[arg(short, long)]
         release: bool,
+        /// Do not print cargo log messages
+        #[arg(short, long)]
+        quiet: bool,
+    },
+    /// Build all package in file in release mode
+    /// and copy the artifacts to the target directory.
+    Release {
+        file_path: String,
+        /// Build only the specified package
+        #[arg(short, long)]
+        package: Option<String>,
+        /// Copy final artifacts to this directory
+        #[arg(short, long, default_value = "./")]
+        out_dir: String,
         /// Do not print cargo log messages
         #[arg(short, long)]
         quiet: bool,
@@ -73,6 +88,18 @@ pub(crate) fn main() -> Result<()> {
                     build_specified_package(file_path, &package, release, quiet)?;
                 } else {
                     build_all(file_path, release, quiet)?;
+                }
+            }
+            SubCommands::Release {
+                file_path,
+                package,
+                out_dir,
+                quiet,
+            } => {
+                if let Some(package) = package {
+                    release_specified_package(file_path, &package, out_dir, quiet)?;
+                } else {
+                    release_all(file_path, out_dir, quiet)?;
                 }
             }
             SubCommands::List { file_path } => {

@@ -8,6 +8,7 @@ mod cli;
 mod list;
 mod package;
 mod run;
+mod release;
 
 fn main() -> Result<()> {
     cli::main()?;

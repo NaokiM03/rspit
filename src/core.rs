@@ -1,4 +1,4 @@
-use std::{env, fs, path::Path, process};
+use std::{fs, path::Path, process};
 
 use anyhow::{bail, Result};
 use tempdir::TempDir;
@@ -91,8 +91,7 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
 // Run
 
 fn execute(package_name: &str) -> Result<()> {
-    let execute_path = env::temp_dir()
-        .join("pit")
+    let execute_path = cache_dir()
         .join(&package_name)
         .join("target")
         .join("debug")
@@ -135,8 +134,7 @@ fn distribute<P: AsRef<Path>>(package_name: &str, out_dir: P) -> Result<()> {
     } else {
         package_name.to_owned()
     };
-    let execute_path = env::temp_dir()
-        .join("pit")
+    let execute_path = cache_dir()
         .join(&package_name)
         .join("target")
         .join("release")

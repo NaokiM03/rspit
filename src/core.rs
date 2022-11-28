@@ -55,15 +55,6 @@ fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Re
 }
 
 pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()> {
-    if !quiet {
-        println!(
-            "{}",
-            &format!("Build {} package", &package.name)
-                .bright_green()
-                .bold()
-        );
-    }
-
     let package_dir = TempDir::new("pit")?.path().join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
@@ -106,21 +97,19 @@ fn execute(package_name: &str) -> Result<()> {
 }
 
 pub(crate) fn run(package: &Package, quiet: bool) -> Result<()> {
-    if !quiet {
-        println!(
-            "{}",
-            &format!("Run {} package", &package.name)
-                .bright_green()
-                .bold()
-        );
-    }
+    let output_text = format!("Run {} package", &package.name)
+        .bright_green()
+        .bold();
 
     // If there is no change in either src or toml, use the executable file on the cache.
     if cache::check_identity_hash(&package).is_some() {
+        println!("{output_text}");
         return execute(&package.name);
     }
 
     build(&package, false, quiet)?;
+
+    println!("{output_text}");
     execute(&package.name)?;
 
     Ok(())
@@ -146,15 +135,6 @@ fn distribute<P: AsRef<Path>>(package_name: &str, out_dir: P) -> Result<()> {
 }
 
 pub(crate) fn release<P: AsRef<Path>>(package: &Package, out_dir: P, quiet: bool) -> Result<()> {
-    if !quiet {
-        println!(
-            "{}",
-            &format!("Release {} package", &package.name)
-                .bright_green()
-                .bold()
-        );
-    }
-
     build(&package, true, quiet)?;
     distribute(&package.name, out_dir)?;
 

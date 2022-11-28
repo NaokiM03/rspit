@@ -20,15 +20,15 @@ pub(crate) fn packages_from_path<P: AsRef<Path>>(file_path: P) -> Vec<Package> {
 
 // Build
 
-fn create_toml(package_dir: &Path, toml: &str) -> Result<()> {
-    let toml_file = package_dir.join("Cargo.toml");
+fn create_toml<P: AsRef<Path>>(package_dir: P, toml: &str) -> Result<()> {
+    let toml_file = package_dir.as_ref().join("Cargo.toml");
     fs::write(toml_file, toml.as_bytes())?;
 
     Ok(())
 }
 
-fn create_src(package_dir: &Path, src: &str) -> Result<()> {
-    let src_dir = package_dir.join("src");
+fn create_src<P: AsRef<Path>>(package_dir: P, src: &str) -> Result<()> {
+    let src_dir = package_dir.as_ref().join("src");
     fs::create_dir(&src_dir)?;
     let src_file = src_dir.join("main.rs");
     fs::write(src_file, src.as_bytes())?;
@@ -36,7 +36,7 @@ fn create_src(package_dir: &Path, src: &str) -> Result<()> {
     Ok(())
 }
 
-fn cargo_build(package_dir: &Path, release: bool, quiet: bool) -> Result<()> {
+fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Result<()> {
     let mut command = process::Command::new("cargo");
     command.arg("build");
     if release {

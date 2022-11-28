@@ -58,6 +58,16 @@ enum SubCommands {
     List { file_path: String },
     /// Add an empty package on top in the given file
     Add { file_path: String },
+    /// Extract the package from file
+    Extract {
+        file_path: String,
+        /// Extract this package
+        #[arg(short, long)]
+        package: String,
+        /// Extract the package to the specified directory
+        #[arg(short, long, default_value = "./")]
+        out_dir: String,
+    },
     /// Remove everything in the cache directory
     Clean,
 }
@@ -109,6 +119,13 @@ pub(crate) fn main() -> Result<()> {
             }
             SubCommands::Add { file_path } => {
                 commands::add_package(file_path)?;
+            }
+            SubCommands::Extract {
+                file_path,
+                package,
+                out_dir,
+            } => {
+                commands::extract_package(file_path, &package, out_dir)?;
             }
             SubCommands::Clean => {
                 commands::clean_cache_dir()?;

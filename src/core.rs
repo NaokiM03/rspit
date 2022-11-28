@@ -160,3 +160,14 @@ pub(crate) fn release<P: AsRef<Path>>(package: &Package, out_dir: P, quiet: bool
 
     Ok(())
 }
+
+// Extract
+
+pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<()> {
+    fs::create_dir(&out_dir)?;
+
+    create_toml(&out_dir, &package.toml)?;
+    create_src(&out_dir, &package.src)?;
+
+    Ok(())
+}

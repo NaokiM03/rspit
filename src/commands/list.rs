@@ -4,10 +4,6 @@ use anyhow::Result;
 
 use crate::core::Package;
 
-pub(crate) fn list_packages<P>(file_path: P) -> Result<()>
-where
-    P: AsRef<Path>,
-{
     let src = fs::read_to_string(file_path)?;
     let names = src
         .split("//# ---")
@@ -16,6 +12,7 @@ where
         .collect::<Vec<String>>()
         .join("\n");
     println!("{}", names);
+pub(crate) fn list_packages<P: AsRef<Path>>(file_path: P) -> Result<()> {
 
     Ok(())
 }

@@ -3,10 +3,7 @@ use std::{fs, path::Path};
 use anyhow::Result;
 use rand::{seq::SliceRandom, thread_rng};
 
-pub(crate) fn add_package<P>(file_path: P) -> Result<()>
-where
-    P: AsRef<Path>,
-{
+pub(crate) fn add_package<P: AsRef<Path>>(file_path: P) -> Result<()> {
     let src = fs::read_to_string(&file_path)?;
 
     let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"

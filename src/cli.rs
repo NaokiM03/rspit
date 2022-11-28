@@ -1,12 +1,7 @@
 use anyhow::Result;
 use clap::{CommandFactory, Parser, Subcommand};
 
-use crate::commands::add_package;
-use crate::commands::clean_cache_dir;
-use crate::commands::list_packages;
-use crate::commands::{build_all, build_specified_package};
-use crate::commands::{release_all, release_specified_package};
-use crate::commands::{run_all, run_specified_package};
+use crate::commands;
 
 #[derive(Debug, Parser)]
 #[command(name = "pit", author, version, about)]
@@ -70,9 +65,9 @@ pub(crate) fn main() -> Result<()> {
                 quiet,
             } => {
                 if let Some(package) = package {
-                    run_specified_package(file_path, &package, quiet)?;
+                    commands::run_specified_package(file_path, &package, quiet)?;
                 } else {
-                    run_all(file_path, quiet)?;
+                    commands::run_all(file_path, quiet)?;
                 }
             }
             SubCommands::Build {
@@ -81,9 +76,9 @@ pub(crate) fn main() -> Result<()> {
                 quiet,
             } => {
                 if let Some(package) = package {
-                    build_specified_package(file_path, &package, quiet)?;
+                    commands::build_specified_package(file_path, &package, quiet)?;
                 } else {
-                    build_all(file_path, quiet)?;
+                    commands::build_all(file_path, quiet)?;
                 }
             }
             SubCommands::Release {
@@ -93,19 +88,19 @@ pub(crate) fn main() -> Result<()> {
                 quiet,
             } => {
                 if let Some(package) = package {
-                    release_specified_package(file_path, &package, out_dir, quiet)?;
+                    commands::release_specified_package(file_path, &package, out_dir, quiet)?;
                 } else {
-                    release_all(file_path, out_dir, quiet)?;
+                    commands::release_all(file_path, out_dir, quiet)?;
                 }
             }
             SubCommands::List { file_path } => {
-                list_packages(file_path)?;
+                commands::list_packages(file_path)?;
             }
             SubCommands::Add { file_path } => {
-                add_package(file_path)?;
+                commands::add_package(file_path)?;
             }
             SubCommands::Clean => {
-                clean_cache_dir()?;
+                commands::clean_cache_dir()?;
             }
         }
     } else {

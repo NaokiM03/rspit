@@ -1,39 +1,33 @@
-use std::{fs, path::Path};
+use std::path::Path;
 
 use anyhow::Result;
 
-use crate::core::{release, Package};
+use crate::core::{packages_from_path, release};
 
 pub(crate) fn release_specified_package<P: AsRef<Path>, Q: AsRef<Path>>(
     file_path: P,
     package: &str,
     out_dir: Q,
     quiet: bool,
-    let src = fs::read_to_string(file_path)?;
-
-    let package = src
-        .split("//# ---")
-        .map(|x| Package::from(x))
 ) -> Result<()> {
+    packages_from_path(file_path)
+        .iter()
         .filter(|x| x.name == package)
         .next()
-        .expect("Package not found in file.");
-    release(&package, out_dir, quiet)?;
+        .iter()
+        .for_each(|package| release(&package, &out_dir, quiet).expect("Failed to release."));
 
     Ok(())
 }
 
-    let src = fs::read_to_string(file_path)?;
-
-    for package in src.split("//# ---") {
-        let package = Package::from(package);
-        release(&package, &out_dir, quiet)?;
-    }
 pub(crate) fn release_all<P: AsRef<Path>, Q: AsRef<Path>>(
     file_path: P,
     out_dir: Q,
     quiet: bool,
 ) -> Result<()> {
+    packages_from_path(file_path)
+        .iter()
+        .for_each(|package| release(&package, &out_dir, quiet).expect("Failed to release."));
 
     Ok(())
 }

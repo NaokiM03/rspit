@@ -1,34 +1,28 @@
-use std::{fs, path::Path};
+use std::path::Path;
 
 use anyhow::Result;
 
-use crate::core::{build, Package};
+use crate::core::{build, packages_from_path};
 
 pub(crate) fn build_specified_package<P: AsRef<Path>>(
     file_path: P,
     package: &str,
     quiet: bool,
 ) -> Result<()> {
-    let src = fs::read_to_string(file_path)?;
-
-    let package = src
-        .split("//# ---")
-        .map(|x| Package::from(x))
+    packages_from_path(file_path)
+        .iter()
         .filter(|x| x.name == package)
         .next()
-        .expect("Package not found in file.");
-    build(&package, false, quiet)?;
+        .iter()
+        .for_each(|package| build(&package, false, quiet).expect("Failed to build."));
 
     Ok(())
 }
 
 pub(crate) fn build_all<P: AsRef<Path>>(file_path: P, quiet: bool) -> Result<()> {
-    let src = fs::read_to_string(file_path)?;
-
-    for package in src.split("//# ---") {
-        let package = Package::from(package);
-        build(&package, false, quiet)?;
-    }
+    packages_from_path(file_path)
+        .iter()
+        .for_each(|package| build(&package, false, quiet).expect("Failed to build."));
 
     Ok(())
 }

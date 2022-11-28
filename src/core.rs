@@ -9,6 +9,14 @@ mod package;
 
 pub(crate) use package::Package;
 
+pub(crate) fn packages_from_path<P: AsRef<Path>>(file_path: P) -> Vec<Package> {
+    fs::read_to_string(file_path)
+        .expect("Failed to read string from file.")
+        .split("//# ---")
+        .map(|x| Package::from(x))
+        .collect()
+}
+
 // Build
 
 fn create_toml(package_dir: &Path, toml: &str) -> Result<()> {

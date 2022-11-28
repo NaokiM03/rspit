@@ -1,18 +1,14 @@
-use std::{fs, path::Path};
+use std::path::Path;
 
 use anyhow::Result;
 
-use crate::core::Package;
+use crate::core::packages_from_path;
 
-    let src = fs::read_to_string(file_path)?;
-    let names = src
-        .split("//# ---")
-        .map(|x| Package::from(x))
-        .map(|x| x.name)
-        .collect::<Vec<String>>()
-        .join("\n");
-    println!("{}", names);
 pub(crate) fn list_packages<P: AsRef<Path>>(file_path: P) -> Result<()> {
+    packages_from_path(file_path)
+        .iter()
+        .map(|x| &x.name)
+        .for_each(|name| println!("{}", name));
 
     Ok(())
 }

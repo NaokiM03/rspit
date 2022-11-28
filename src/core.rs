@@ -163,12 +163,24 @@ pub(crate) fn release<P: AsRef<Path>>(package: &Package, out_dir: P, quiet: bool
 
 // Extract
 
-pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<()> {
-    let project_dir = out_dir.as_ref().join(&package.name);
-    fs::create_dir(&project_dir)?;
+fn create_gitignore<P: AsRef<Path>>(package_dir: P) -> Result<()> {
+    let gitignore = package_dir.as_ref().join(".gitignore");
+    let contents = r#"
+/target
+"#
+    .trim_start();
+    fs::write(gitignore, contents)?;
 
-    create_toml(&project_dir, &package.toml)?;
-    create_src(&project_dir, &package.src)?;
+    Ok(())
+}
+
+pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<()> {
+    let package_dir = out_dir.as_ref().join(&package.name);
+    fs::create_dir(&package_dir)?;
+
+    create_toml(&package_dir, &package.toml)?;
+    create_src(&package_dir, &package.src)?;
+    create_gitignore(&package_dir)?;
 
     Ok(())
 }

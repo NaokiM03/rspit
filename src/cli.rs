@@ -46,6 +46,14 @@ enum SubCommands {
         #[arg(short, long)]
         quiet: bool,
     },
+    /// Create a new file
+    Init {
+        #[arg(default_value = "snippet.rs")]
+        file_name: String,
+        /// Create a new file in the specified directory
+        #[arg(short, long, default_value = "./")]
+        out_dir: String,
+    },
     /// List all packages in the given file
     List { file_path: String },
     /// Add an empty package on top in the given file
@@ -92,6 +100,9 @@ pub(crate) fn main() -> Result<()> {
                 } else {
                     commands::release_all(file_path, out_dir, quiet)?;
                 }
+            }
+            SubCommands::Init { file_name, out_dir } => {
+                commands::init_snippet(&file_name, out_dir)?;
             }
             SubCommands::List { file_path } => {
                 commands::list_packages(file_path)?;

@@ -7,6 +7,7 @@ use tiny_ansi::TinyAnsi;
 mod cache;
 mod package;
 
+pub(crate) use cache::cache_dir;
 pub(crate) use package::Package;
 
 pub(crate) fn packages_from_path<P: AsRef<Path>>(file_path: P) -> Vec<Package> {
@@ -70,7 +71,7 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
     create_src(&package_dir, &package.src)?;
 
     let package_target_dir = package_dir.join("target");
-    let cache_target_dir = cache::cache_dir(&package.name).join("target");
+    let cache_target_dir = cache::cache_dir().join(&package.name).join("target");
 
     cache::restore(&cache_target_dir, &package_target_dir)?;
     cargo_build(&package_dir, release, quiet)?;

@@ -16,7 +16,6 @@ impl From<&str> for Package {
             .skip_while(|line| line.is_empty())
             .take_while(|line| line.starts_with("//#"))
             .map(|line| line[3..].trim())
-            // .filter(|line| !line.is_empty())
             .collect::<Vec<&str>>()
             .join("\n");
 

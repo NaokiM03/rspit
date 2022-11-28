@@ -31,7 +31,7 @@ fn run(package: &Package, quiet: bool) -> Result<()> {
         );
     }
 
-    // If there is no change in iether src or toml, use the executable file on the cache.
+    // If there is no change in either src or toml, use the executable file on the cache.
     if cache::check_identity_hash(&package).is_some() {
         return execute(&package.name);
     }

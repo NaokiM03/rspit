@@ -12,20 +12,20 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum SubCommands {
-    /// Run all package in file
-    Run {
+    /// Build all package in file
+    Build {
         file_path: String,
-        /// Run only the specified package
+        /// Build only the specified package
         #[arg(short, long)]
         package: Option<String>,
         /// Do not print cargo log messages
         #[arg(short, long)]
         quiet: bool,
     },
-    /// Build all package in file
-    Build {
+    /// Run all package in file
+    Run {
         file_path: String,
-        /// Build only the specified package
+        /// Run only the specified package
         #[arg(short, long)]
         package: Option<String>,
         /// Do not print cargo log messages
@@ -77,17 +77,6 @@ pub(crate) fn main() -> Result<()> {
 
     if let Some(command) = args.command {
         match command {
-            SubCommands::Run {
-                file_path,
-                package,
-                quiet,
-            } => {
-                if let Some(package) = package {
-                    commands::run_specified_package(file_path, &package, quiet)?;
-                } else {
-                    commands::run_all(file_path, quiet)?;
-                }
-            }
             SubCommands::Build {
                 file_path,
                 package,
@@ -97,6 +86,17 @@ pub(crate) fn main() -> Result<()> {
                     commands::build_specified_package(file_path, &package, quiet)?;
                 } else {
                     commands::build_all(file_path, quiet)?;
+                }
+            }
+            SubCommands::Run {
+                file_path,
+                package,
+                quiet,
+            } => {
+                if let Some(package) = package {
+                    commands::run_specified_package(file_path, &package, quiet)?;
+                } else {
+                    commands::run_all(file_path, quiet)?;
                 }
             }
             SubCommands::Release {

@@ -9,6 +9,8 @@ mod package;
 
 pub(crate) use package::Package;
 
+// Build
+
 fn create_toml(package_dir: &Path, toml: &str) -> Result<()> {
     let toml_file = package_dir.join("Cargo.toml");
     fs::write(toml_file, toml.as_bytes())?;
@@ -77,6 +79,8 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
     Ok(())
 }
 
+// Run
+
 fn execute(package_name: &str) -> Result<()> {
     let execute_path = env::temp_dir()
         .join("pit")
@@ -113,6 +117,8 @@ pub(crate) fn run(package: &Package, quiet: bool) -> Result<()> {
 
     Ok(())
 }
+
+// Release
 
 fn distribute<P: AsRef<Path>>(package_name: &str, out_dir: P) -> Result<()> {
     let file_name = if cfg!(windows) {

@@ -64,7 +64,7 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
     cache::store(&package_target_dir, &cache_target_dir)?;
 
     // The hash is not stored at release build time.
-    // This is because the `run` command always uses the debug build.
+    // This is because release build is only used with the `release` command.
     if release {
         return Ok(());
     }
@@ -74,12 +74,7 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
     Ok(())
 }
 
-pub(crate) fn build_specified_package<P>(
-    file_path: P,
-    package: &str,
-    release: bool,
-    quiet: bool,
-) -> Result<()>
+pub(crate) fn build_specified_package<P>(file_path: P, package: &str, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -91,12 +86,12 @@ where
         .filter(|x| x.name == package)
         .next()
         .expect("Package not found in file.");
-    build(&package, release, quiet)?;
+    build(&package, false, quiet)?;
 
     Ok(())
 }
 
-pub(crate) fn build_all<P>(file_path: P, release: bool, quiet: bool) -> Result<()>
+pub(crate) fn build_all<P>(file_path: P, quiet: bool) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -104,7 +99,7 @@ where
 
     for package in src.split("//# ---") {
         let package = Package::from(package);
-        build(&package, release, quiet)?;
+        build(&package, false, quiet)?;
     }
 
     Ok(())

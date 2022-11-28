@@ -33,9 +33,6 @@ enum SubCommands {
         /// Build only the specified package
         #[arg(short, long)]
         package: Option<String>,
-        /// Build in release mode with optimizations
-        #[arg(short, long)]
-        release: bool,
         /// Do not print cargo log messages
         #[arg(short, long)]
         quiet: bool,
@@ -81,13 +78,12 @@ pub(crate) fn main() -> Result<()> {
             SubCommands::Build {
                 file_path,
                 package,
-                release,
                 quiet,
             } => {
                 if let Some(package) = package {
-                    build_specified_package(file_path, &package, release, quiet)?;
+                    build_specified_package(file_path, &package, quiet)?;
                 } else {
-                    build_all(file_path, release, quiet)?;
+                    build_all(file_path, quiet)?;
                 }
             }
             SubCommands::Release {

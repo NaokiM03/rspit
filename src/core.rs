@@ -1,6 +1,7 @@
 use std::{fs, path::Path, process};
 
 use anyhow::{bail, Result};
+use rand::{seq::SliceRandom, thread_rng};
 use tempdir::TempDir;
 use tiny_ansi::TinyAnsi;
 
@@ -141,6 +142,92 @@ pub(crate) fn release<P: AsRef<Path>>(package: &Package, out_dir: P, quiet: bool
     Ok(())
 }
 
+// Init
+
+pub(crate) fn init<P: AsRef<Path>>(file_path: P) -> Result<()> {
+    let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
+        .as_bytes()
+        .choose_multiple(&mut thread_rng(), 7)
+        .cloned()
+        .map(char::from)
+        .collect();
+    let name = format!("tmp-{}", random_str);
+
+    let content = format!(
+        r###"
+//# [package]
+//# name = "{}"
+//# version = "0.1.0"
+//# edition = "2021"
+//#
+//# [dependencies]
+//#
+//# [profile.release]
+//# lto = true
+
+fn main() {{
+}}
+"###,
+        name
+    );
+    let content = content.trim_start();
+
+    fs::write(file_path, content)?;
+
+    Ok(())
+}
+
+// List
+
+pub(crate) fn list<P: AsRef<Path>>(file_path: P) -> Result<()> {
+    packages_from_path(file_path)
+        .iter()
+        .map(|x| &x.name)
+        .for_each(|name| println!("{}", name));
+
+    Ok(())
+}
+
+// Add
+
+pub(crate) fn add<P: AsRef<Path>>(file_path: P) -> Result<()> {
+    let src = fs::read_to_string(&file_path)?;
+
+    let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
+        .as_bytes()
+        .choose_multiple(&mut thread_rng(), 7)
+        .cloned()
+        .map(char::from)
+        .collect();
+    let name = format!("tmp-{}", random_str);
+
+    let content = format!(
+        r###"
+//# [package]
+//# name = "{}"
+//# version = "0.1.0"
+//# edition = "2021"
+//#
+//# [dependencies]
+//#
+//# [profile.release]
+//# lto = true
+
+fn main() {{
+}}
+
+//# ---
+
+{}"###,
+        name, src
+    );
+    let content = content.trim_start();
+
+    fs::write(file_path, content)?;
+
+    Ok(())
+}
+
 // Extract
 
 fn create_gitignore<P: AsRef<Path>>(package_dir: P) -> Result<()> {
@@ -161,6 +248,18 @@ pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<(
     create_toml(&package_dir, &package.toml)?;
     create_src(&package_dir, &package.src)?;
     create_gitignore(&package_dir)?;
+
+    Ok(())
+}
+
+// Clean
+
+pub(crate) fn clean() -> Result<()> {
+    for entry in cache_dir().read_dir()? {
+        if let Ok(entry) = entry {
+            fs::remove_dir_all(entry.path())?;
+        }
+    }
 
     Ok(())
 }

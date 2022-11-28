@@ -21,6 +21,9 @@ enum SubCommands {
         /// Do not print cargo log messages
         #[arg(short, long)]
         quiet: bool,
+        /// Build in parallel without cargo log messages
+        #[arg(long)]
+        parallel: bool,
     },
     /// Run all package in file
     Run {
@@ -45,6 +48,9 @@ enum SubCommands {
         /// Do not print cargo log messages
         #[arg(short, long)]
         quiet: bool,
+        /// Build in parallel without cargo log messages
+        #[arg(long)]
+        parallel: bool,
     },
     /// Create a new file
     Init {
@@ -81,9 +87,12 @@ pub(crate) fn main() -> Result<()> {
                 file_path,
                 package,
                 quiet,
+                parallel,
             } => {
                 if let Some(package) = package {
                     commands::build_specified_package(file_path, &package, quiet)?;
+                } else if parallel {
+                    commands::build_all_parallel(file_path)?;
                 } else {
                     commands::build_all(file_path, quiet)?;
                 }
@@ -104,9 +113,12 @@ pub(crate) fn main() -> Result<()> {
                 package,
                 out_dir,
                 quiet,
+                parallel,
             } => {
                 if let Some(package) = package {
                     commands::release_specified_package(file_path, &package, out_dir, quiet)?;
+                } else if parallel {
+                    commands::release_all_parallel(file_path, out_dir)?;
                 } else {
                     commands::release_all(file_path, out_dir, quiet)?;
                 }

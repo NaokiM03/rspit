@@ -239,7 +239,7 @@ fn create_gitignore<P: AsRef<Path>>(package_dir: P) -> Result<()> {
 
 pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<()> {
     let package_dir = out_dir.as_ref().join(&package.name);
-    fs::create_dir(&package_dir)?;
+    fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;
     create_src(&package_dir, &package.src)?;

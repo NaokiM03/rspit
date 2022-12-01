@@ -66,7 +66,9 @@ fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Re
 }
 
 pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()> {
-    let package_dir = TempDir::new("pit")?.path().join(&package.name);
+    // Separate variables to automatically delete temp_dir.
+    let temp_dir = TempDir::new("pit")?;
+    let package_dir = temp_dir.path().join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;

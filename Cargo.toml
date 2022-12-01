@@ -11,7 +11,7 @@ license = "MIT"
 
 [dependencies]
 anyhow = "1.0.66"
-clap = { version = "4.0.27", features = ["derive"] }
+clap = { version = "4.0.29", features = ["derive"] }
 rand = "0.8.5"
 rayon = "1.6.0"
 serde = "1.0.148"

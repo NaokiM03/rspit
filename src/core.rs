@@ -252,9 +252,8 @@ pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<(
 
 pub(crate) fn clean() -> Result<()> {
     for entry in cache_dir().read_dir()? {
-        if let Ok(entry) = entry {
-            fs::remove_dir_all(entry.path())?;
-        }
+        let Ok(entry) = entry else { continue };
+        fs::remove_dir_all(entry.path())?;
     }
 
     Ok(())

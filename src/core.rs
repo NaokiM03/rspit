@@ -1,8 +1,11 @@
-use std::{fs, path::Path, process};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process,
+};
 
 use anyhow::{bail, Result};
-use rand::{seq::SliceRandom, thread_rng};
-use tempdir::TempDir;
+use rand::{distributions::Alphanumeric, seq::SliceRandom, thread_rng, Rng};
 use tiny_ansi::TinyAnsi;
 
 mod cache;
@@ -30,6 +33,15 @@ fn random_name() -> String {
 }
 
 // Build
+
+fn temp_dir() -> PathBuf {
+    let suffix: String = thread_rng()
+        .sample_iter(Alphanumeric)
+        .take(16)
+        .map(char::from)
+        .collect();
+    env::temp_dir().join(format!("pit-{}", suffix))
+}
 
 fn create_toml<P: AsRef<Path>>(package_dir: P, toml: &str) -> Result<()> {
     let toml_file = package_dir.as_ref().join("Cargo.toml");
@@ -66,9 +78,8 @@ fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Re
 }
 
 pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()> {
-    // Separate variables to automatically delete temp_dir.
-    let temp_dir = TempDir::new("pit")?;
-    let package_dir = temp_dir.path().join(&package.name);
+    let temp_dir = temp_dir();
+    let package_dir = temp_dir.join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;
@@ -80,6 +91,8 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
     cache::restore(&cache_target_dir, &package_target_dir)?;
     cargo_build(&package_dir, release, quiet)?;
     cache::store(&package_target_dir, &cache_target_dir)?;
+
+    let _ = fs::remove_dir_all(temp_dir);
 
     // The hash is not stored at release build time.
     // This is because release build is only used with the `release` command.

@@ -17,7 +17,6 @@ rayon = "1.6.0"
 serde = "1.0.148"
 serde_derive = "1.0.148"
 sha2 = "0.10.6"
-tempdir = "0.3.7"
 tiny-ansi = "0.1.0"
 toml = "0.5.9"
 

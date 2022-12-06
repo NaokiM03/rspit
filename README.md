@@ -96,11 +96,12 @@ name: "Alice", age: 42
 $ pit --help
 A command-line tool to run Rust snippet.
 
-Usage: pit.exe [COMMAND]
+Usage: pit [COMMAND]
 
 Commands:
-  run      Run all package in file
+  check    Check all package in file
   build    Build all package in file
+  run      Run all package in file
   release  Build all package in file in release mode and copy the artifacts to the target directory
   init     Create a new file
   list     List all packages in the given file

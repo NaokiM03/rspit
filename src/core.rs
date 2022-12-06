@@ -32,8 +32,6 @@ fn random_name() -> String {
     format!("tmp-{}", random_str)
 }
 
-// Build
-
 fn temp_dir() -> PathBuf {
     let suffix: String = thread_rng()
         .sample_iter(Alphanumeric)
@@ -58,6 +56,45 @@ fn create_src<P: AsRef<Path>>(package_dir: P, src: &str) -> Result<()> {
 
     Ok(())
 }
+
+// Check
+
+fn cargo_check<P: AsRef<Path>>(package_dir: P, quiet: bool) -> Result<()> {
+    let mut command = process::Command::new("cargo");
+    command.arg("check");
+    if quiet {
+        command.arg("--quiet");
+    }
+    let exit_status = command.current_dir(&package_dir).spawn()?.wait()?;
+
+    if !exit_status.success() {
+        bail!("Failed to check.");
+    }
+
+    Ok(())
+}
+
+pub(crate) fn check(package: &Package, quiet: bool) -> Result<()> {
+    let temp_dir = temp_dir();
+    let package_dir = temp_dir.join(&package.name);
+    fs::create_dir_all(&package_dir)?;
+
+    create_toml(&package_dir, &package.toml)?;
+    create_src(&package_dir, &package.src)?;
+
+    let package_target_dir = package_dir.join("target");
+    let cache_target_dir = cache::cache_dir().join(&package.name).join("target");
+
+    cache::restore(&cache_target_dir, &package_target_dir)?;
+    cargo_check(&package_dir, quiet)?;
+    cache::store(&package_target_dir, &cache_target_dir)?;
+
+    let _ = fs::remove_dir_all(temp_dir);
+
+    Ok(())
+}
+
+// Build
 
 fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Result<()> {
     let mut command = process::Command::new("cargo");

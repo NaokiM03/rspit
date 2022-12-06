@@ -1,5 +1,6 @@
 mod add;
 mod build;
+mod check;
 mod clean;
 mod extract;
 mod init;
@@ -9,6 +10,7 @@ mod run;
 
 pub(crate) use add::add_package;
 pub(crate) use build::{build_all, build_all_parallel, build_specified_package};
+pub(crate) use check::{check_all, check_specified_package};
 pub(crate) use clean::clean_cache_dir;
 pub(crate) use extract::extract_package;
 pub(crate) use init::init_snippet;

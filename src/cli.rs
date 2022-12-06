@@ -12,6 +12,16 @@ struct Args {
 
 #[derive(Debug, Subcommand)]
 enum SubCommands {
+    /// Check all package in file
+    Check {
+        file_path: String,
+        /// Check only the specified package
+        #[arg(short, long)]
+        package: Option<String>,
+        /// Do not print cargo log messages
+        #[arg(short, long)]
+        quiet: bool,
+    },
     /// Build all package in file
     Build {
         file_path: String,
@@ -83,6 +93,17 @@ pub(crate) fn main() -> Result<()> {
 
     if let Some(command) = args.command {
         match command {
+            SubCommands::Check {
+                file_path,
+                package,
+                quiet,
+            } => {
+                if let Some(package) = package {
+                    commands::check_specified_package(file_path, &package, quiet)?;
+                } else {
+                    commands::check_all(file_path, quiet)?;
+                }
+            }
             SubCommands::Build {
                 file_path,
                 package,

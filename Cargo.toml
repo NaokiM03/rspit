@@ -10,15 +10,15 @@ readme = "README.md"
 license = "MIT"
 
 [dependencies]
-anyhow = "1.0.66"
-clap = { version = "4.0.29", features = ["derive"] }
+anyhow = "1.0.68"
+clap = { version = "4.0.32", features = ["derive"] }
 rand = "0.8.5"
-rayon = "1.6.0"
-serde = "1.0.149"
-serde_derive = "1.0.149"
+rayon = "1.6.1"
+serde = "1.0.152"
+serde_derive = "1.0.152"
 sha2 = "0.10.6"
 tiny-ansi = "0.1.0"
-toml = "0.5.9"
+toml = "0.5.10"
 
 [[bin]]
 name = "pit"

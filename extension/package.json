@@ -10,7 +10,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:rspit.helloWorld"
+    "onLanguage:rust"
   ],
   "main": "./out/extension.js",
   "contributes": {

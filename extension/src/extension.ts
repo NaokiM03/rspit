@@ -1,26 +1,62 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+class CodeLensProvider implements vscode.CodeLensProvider {
+  constructor() {}
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "rspit" is now active!');
+  public provideCodeLenses(
+    document: vscode.TextDocument,
+    _token: vscode.CancellationToken
+  ): vscode.ProviderResult<vscode.CodeLens[]> {
+    const fileContent: string = document.getText();
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('rspit.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from RSPIT!');
-	});
+    const lines: {
+      content: string;
+      number: number;
+    }[] = fileContent.split("\n").map((s: string, i: number) => {
+      return { content: s, number: i };
+    });
 
-	context.subscriptions.push(disposable);
+    if (lines.length === 0) {
+      return;
+    }
+
+    const targetLines: {
+      content: string;
+      number: number;
+    }[] = lines.filter((line) => line.content.match(/fn main\(\)+\s/) !== null);
+
+    const ranges: vscode.Range[] = targetLines.map(
+      (line) =>
+        new vscode.Range(
+          new vscode.Position(line.number, 0),
+          new vscode.Position(line.number, line.content.length)
+        )
+    );
+
+    return ranges.map(
+      (range) =>
+        new vscode.CodeLens(range, {
+          title: "▶ Run",
+          command: "rspit.helloWorld",
+          tooltip: "Run this snippet",
+        })
+    );
+  }
 }
 
-// This method is called when your extension is deactivated
+export function activate(context: vscode.ExtensionContext) {
+  let disposable = vscode.commands.registerCommand("rspit.helloWorld", () => {
+    vscode.window.showInformationMessage("Hello World from RSPIT!");
+  });
+
+  const codeLensProvider = new CodeLensProvider();
+  const codeLensProviderDisposable = vscode.languages.registerCodeLensProvider(
+    { language: "rust" },
+    codeLensProvider
+  );
+
+  context.subscriptions.push(disposable);
+  context.subscriptions.push(codeLensProviderDisposable);
+}
+
 export function deactivate() {}

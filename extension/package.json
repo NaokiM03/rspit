@@ -16,10 +16,18 @@
   "contributes": {
     "commands": [
       {
-        "command": "rspit.helloWorld",
-        "title": "Hello World"
+        "command": "rspit.runSnippet",
+        "title": "RSPIT: Run this snippet"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "rspit.runSnippet",
+          "when": "false"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -41,5 +49,8 @@
     "mocha": "^10.1.0",
     "typescript": "^4.9.4",
     "@vscode/test-electron": "^2.2.2"
+  },
+  "dependencies": {
+    "@iarna/toml": "^2.2.5"
   }
 }

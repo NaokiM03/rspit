@@ -64,7 +64,7 @@ enum SubCommands {
     },
     /// Create a new file
     Init {
-        #[arg(default_value = "snippet.rs")]
+        #[arg(default_value = "rspit.rs")]
         file_name: String,
         /// Create a new file in the specified directory
         #[arg(short, long, default_value = "./")]

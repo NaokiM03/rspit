@@ -11,7 +11,7 @@ use tiny_ansi::TinyAnsi;
 mod cache;
 mod package;
 
-pub(crate) use cache::cache_dir;
+pub(crate) use cache::Cache;
 pub(crate) use package::Package;
 
 pub(crate) fn packages_from_path<P: AsRef<Path>>(file_path: P) -> Vec<Package> {
@@ -83,14 +83,11 @@ pub(crate) fn check(file_name: &str, package: &Package, quiet: bool) -> Result<(
     create_src(&package_dir, &package.src)?;
 
     let package_target_dir = package_dir.join("target");
-    let cache_target_dir = cache::cache_dir()
-        .join(file_name)
-        .join(&package.name)
-        .join("target");
+    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
 
-    cache::restore(&cache_target_dir, &package_target_dir)?;
+    cache.restore(&package_target_dir)?;
     cargo_check(&package_dir, quiet)?;
-    cache::store(&package_target_dir, &cache_target_dir)?;
+    cache.store(&package_target_dir)?;
 
     let _ = fs::remove_dir_all(temp_dir);
 
@@ -126,14 +123,11 @@ pub(crate) fn build(file_name: &str, package: &Package, release: bool, quiet: bo
     create_src(&package_dir, &package.src)?;
 
     let package_target_dir = package_dir.join("target");
-    let cache_target_dir = cache::cache_dir()
-        .join(file_name)
-        .join(&package.name)
-        .join("target");
+    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
 
-    cache::restore(&cache_target_dir, &package_target_dir)?;
+    cache.restore(&package_target_dir)?;
     cargo_build(&package_dir, release, quiet)?;
-    cache::store(&package_target_dir, &cache_target_dir)?;
+    cache.store(&package_target_dir)?;
 
     let _ = fs::remove_dir_all(temp_dir);
 
@@ -143,21 +137,16 @@ pub(crate) fn build(file_name: &str, package: &Package, release: bool, quiet: bo
         return Ok(());
     }
 
-    cache::write_identity_hash(file_name, &package)?;
+    cache.write_identity_hash()?;
 
     Ok(())
 }
 
 // Run
 
-fn execute(file_name: &str, package_name: &str) -> Result<()> {
-    let execute_path = cache_dir()
-        .join(file_name)
-        .join(&package_name)
-        .join("target")
-        .join("debug")
-        .join(package_name);
-    let exit_status = process::Command::new(execute_path).spawn()?.wait()?;
+fn execute(cache: Cache) -> Result<()> {
+    let exe = cache.debug_exe();
+    let exit_status = process::Command::new(exe).spawn()?.wait()?;
 
     if !exit_status.success() {
         bail!("Failed to execute.");
@@ -171,40 +160,37 @@ pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()>
         .bright_green()
         .bold();
 
+    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
+
     // If there is no change in either src or toml, use the executable file on the cache.
-    if cache::check_identity_hash(file_name, package).is_some() {
+    if cache.check_identity_hash().is_some() {
         println!("{output_text}");
-        return execute(file_name, &package.name);
+        return execute(cache);
     }
 
     build(file_name, package, false, quiet)?;
 
     println!("{output_text}");
-    execute(file_name, &package.name)?;
+    execute(cache)?;
 
     Ok(())
 }
 
 // Release
 
-fn distribute<P: AsRef<Path>>(file_name: &str, package_name: &str, out_dir: P) -> Result<()> {
+fn distribute<P: AsRef<Path>>(cache: Cache, out_dir: P) -> Result<()> {
     let exe_name = if cfg!(windows) {
-        format!("{}.exe", package_name)
+        format!("{}.exe", cache.package_name())
     } else {
-        package_name.to_owned()
+        cache.package_name()
     };
-    let execute_path = cache_dir()
-        .join(file_name)
-        .join(&package_name)
-        .join("target")
-        .join("release")
-        .join(&exe_name);
+    let from = cache.release_exe();
 
     let out_dir = out_dir.as_ref();
     fs::create_dir_all(out_dir)?;
 
-    let target_path = out_dir.join(&exe_name);
-    fs::copy(&execute_path, target_path)?;
+    let to = out_dir.join(&exe_name);
+    fs::copy(from, to)?;
 
     Ok(())
 }
@@ -215,8 +201,10 @@ pub(crate) fn release<P: AsRef<Path>>(
     out_dir: P,
     quiet: bool,
 ) -> Result<()> {
+    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
+
     build(file_name, package, true, quiet)?;
-    distribute(file_name, &package.name, out_dir)?;
+    distribute(cache, out_dir)?;
 
     Ok(())
 }
@@ -320,7 +308,7 @@ pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<(
 // Clean
 
 pub(crate) fn clean() -> Result<()> {
-    for entry in cache_dir().read_dir()? {
+    for entry in Cache::root_dir().read_dir()? {
         let Ok(entry) = entry else { continue };
         fs::remove_dir_all(entry.path())?;
     }

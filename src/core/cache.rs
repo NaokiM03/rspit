@@ -4,65 +4,96 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use serde_derive::{Deserialize, Serialize};
 
-use super::package::Package;
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct Identity {
-    pub(crate) name: String,
-    pub(crate) hash: String,
+pub(crate) struct Cache {
+    root: PathBuf,
+    file_name: String,
+    package_name: String,
+    identity_hash: String,
 }
 
-pub(crate) fn restore(cache_target_dir: &Path, package_target_dir: &Path) -> Result<()> {
-    fs::create_dir_all(&cache_target_dir)?;
-    // Restore target directory from cache.
-    fs::rename(&cache_target_dir, &package_target_dir)?;
-
-    Ok(())
-}
-
-pub(crate) fn store(package_target_dir: &Path, cache_target_dir: &Path) -> Result<()> {
-    if cache_target_dir.exists() {
-        bail!("Failed to handle cache.")
-    }
-    // Store target directory in cache.
-    fs::rename(package_target_dir, cache_target_dir)?;
-
-    Ok(())
-}
-
-pub(crate) fn cache_dir() -> PathBuf {
-    env::temp_dir().join("pit")
-}
-
-pub(crate) fn write_identity_hash(file_name: &str, package: &Package) -> Result<()> {
-    let cache_identity_path = cache_dir()
-        .join(file_name)
-        .join(&package.name)
-        .join("identity_hash.toml");
-    let identity = package.gen_identity();
-    // Store the hash generated from src and toml.
-    let identity = toml::to_string(&Identity {
-        name: identity.name,
-        hash: identity.hash,
-    })?;
-    fs::write(cache_identity_path, identity)?;
-
-    Ok(())
-}
-
-pub(crate) fn check_identity_hash(file_name: &str, package: &Package) -> Option<()> {
-    let identity = package.gen_identity();
-    let cache_identity_path = cache_dir()
-        .join(file_name)
-        .join(&package.name)
-        .join("identity_hash.toml");
-    if let Ok(cache_identity) = fs::read_to_string(&cache_identity_path) {
-        let cache_identity: Identity = toml::from_str(&cache_identity).unwrap();
-        if identity.hash == cache_identity.hash {
-            return Some(());
+impl Cache {
+    pub(crate) fn new(file_name: &str, package_name: &str, identity_hash: &str) -> Cache {
+        let root = Self::root_dir();
+        let file_name = file_name.to_owned();
+        let package_name = package_name.to_owned();
+        let identity_hash = identity_hash.to_owned();
+        Cache {
+            root,
+            file_name,
+            package_name,
+            identity_hash,
         }
     }
-    None
+
+    pub(crate) fn package_name(&self) -> String {
+        self.package_name.to_owned()
+    }
+
+    pub(crate) fn root_dir() -> PathBuf {
+        env::temp_dir().join("pit")
+    }
+
+    fn package_dir(&self) -> PathBuf {
+        self.root.join(&self.file_name).join(&self.package_name)
+    }
+
+    fn target_dir(&self) -> PathBuf {
+        self.package_dir().join("target")
+    }
+
+    pub(crate) fn debug_exe(&self) -> PathBuf {
+        let exe_name = if cfg!(windows) {
+            format!("{}.exe", &self.package_name)
+        } else {
+            self.package_name.to_owned()
+        };
+        self.target_dir().join("debug").join(exe_name)
+    }
+
+    pub(crate) fn release_exe(&self) -> PathBuf {
+        let exe_name = if cfg!(windows) {
+            format!("{}.exe", &self.package_name)
+        } else {
+            self.package_name.to_owned()
+        };
+        self.target_dir().join("release").join(exe_name)
+    }
+
+    pub(crate) fn restore<P: AsRef<Path>>(&self, package_target_dir: P) -> Result<()> {
+        fs::create_dir_all(self.target_dir())?;
+        // Restore target directory from cache.
+        fs::rename(self.target_dir(), &package_target_dir)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn store<P: AsRef<Path>>(&self, package_target_dir: P) -> Result<()> {
+        if self.target_dir().exists() {
+            bail!("Failed to handle cache.")
+        }
+        // Store target directory in cache.
+        fs::rename(package_target_dir, self.target_dir())?;
+
+        Ok(())
+    }
+
+    pub(crate) fn write_identity_hash(&self) -> Result<()> {
+        let path = self.package_dir().join("identity_hash");
+        let contents = self.identity_hash.to_owned();
+        fs::write(path, contents)?;
+
+        Ok(())
+    }
+
+    pub(crate) fn check_identity_hash(&self) -> Option<()> {
+        let path = self.package_dir().join("identity_hash");
+
+        if let Ok(identity_hash) = fs::read_to_string(&path) {
+            if identity_hash == self.identity_hash {
+                return Some(());
+            }
+        }
+        None
+    }
 }

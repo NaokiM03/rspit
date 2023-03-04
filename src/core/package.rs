@@ -1,7 +1,5 @@
 use sha2::{Digest, Sha256};
 
-use super::cache::Identity;
-
 #[derive(Debug)]
 pub(crate) struct Package {
     pub(crate) name: String,
@@ -40,15 +38,12 @@ impl From<&str> for Package {
 }
 
 impl Package {
-    pub(crate) fn gen_identity(&self) -> Identity {
+    pub(crate) fn identity_hash(&self) -> String {
         let hash = Sha256::new()
             .chain_update(&self.toml)
             .chain_update(&self.src)
             .finalize();
-        Identity {
-            name: self.name.to_owned(),
-            hash: format!("{:x}", hash),
-        }
+        return format!("{:x}", hash);
     }
 }
 

@@ -12,15 +12,7 @@ mod cache;
 mod package;
 
 pub(crate) use cache::Cache;
-pub(crate) use package::Package;
-
-pub(crate) fn packages_from_path<P: AsRef<Path>>(file_path: P) -> Vec<Package> {
-    fs::read_to_string(file_path)
-        .expect("Failed to read string from file.")
-        .split("//# ---")
-        .map(|x| Package::from(x))
-        .collect()
-}
+pub(crate) use package::{packages_from_path, Package};
 
 fn random_name() -> String {
     let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -236,15 +228,8 @@ fn main() {{
 }
 
 // List
-
-pub(crate) fn list<P: AsRef<Path>>(file_path: P) -> Result<()> {
-    packages_from_path(file_path)
-        .iter()
-        .map(|x| &x.name)
-        .for_each(|name| println!("{}", name));
-
-    Ok(())
-}
+// Removed because too simple.
+// For exaple, if want an option to show 
 
 // Add
 

@@ -1,3 +1,5 @@
+use std::{fs, path::Path};
+
 use sha2::{Digest, Sha256};
 
 #[derive(Debug)]
@@ -45,6 +47,14 @@ impl Package {
             .finalize();
         return format!("{:x}", hash);
     }
+}
+
+pub(crate) fn packages_from_path<P: AsRef<Path>>(file_path: P) -> Vec<Package> {
+    fs::read_to_string(file_path)
+        .expect("Failed to read string from file.")
+        .split("//# ---")
+        .map(|x| Package::from(x))
+        .collect()
 }
 
 #[test]

@@ -76,7 +76,7 @@ fn cargo_check<P: AsRef<Path>>(package_dir: P, quiet: bool) -> Result<()> {
 
 pub(crate) fn check(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
     let temp_dir = temp_dir();
-    let package_dir = temp_dir.join(file_name).join(&package.name);
+    let package_dir = temp_dir.join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;
@@ -119,7 +119,7 @@ fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Re
 
 pub(crate) fn build(file_name: &str, package: &Package, release: bool, quiet: bool) -> Result<()> {
     let temp_dir = temp_dir();
-    let package_dir = temp_dir.join(file_name).join(&package.name);
+    let package_dir = temp_dir.join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;
@@ -306,10 +306,7 @@ fn create_gitignore<P: AsRef<Path>>(package_dir: P) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn extract<P: AsRef<Path>>(
-    package: &Package,
-    out_dir: P,
-) -> Result<()> {
+pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<()> {
     let package_dir = out_dir.as_ref().join(&package.name);
     fs::create_dir_all(&package_dir)?;
 

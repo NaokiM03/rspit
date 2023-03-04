@@ -13,7 +13,7 @@ pub(crate) fn extract_package<P: AsRef<Path>, Q: AsRef<Path>>(
         .iter()
         .find(|x| x.name == package)
         .iter()
-        .for_each(|package| extract(&package, &out_dir).expect("Failed to extract."));
+        .for_each(|package| extract(package, &out_dir).expect("Failed to extract."));
 
     Ok(())
 }

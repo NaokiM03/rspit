@@ -36,8 +36,11 @@ pub(crate) fn cache_dir() -> PathBuf {
     env::temp_dir().join("pit")
 }
 
-pub(crate) fn write_identity_hash(package: &Package) -> Result<()> {
-    let cache_identity_path = cache_dir().join(&package.name).join("identity_hash.toml");
+pub(crate) fn write_identity_hash(file_name: &str, package: &Package) -> Result<()> {
+    let cache_identity_path = cache_dir()
+        .join(file_name)
+        .join(&package.name)
+        .join("identity_hash.toml");
     let identity = package.gen_identity();
     // Store the hash generated from src and toml.
     let identity = toml::to_string(&Identity {

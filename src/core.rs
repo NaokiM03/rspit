@@ -74,16 +74,19 @@ fn cargo_check<P: AsRef<Path>>(package_dir: P, quiet: bool) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn check(package: &Package, quiet: bool) -> Result<()> {
+pub(crate) fn check(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
     let temp_dir = temp_dir();
-    let package_dir = temp_dir.join(&package.name);
+    let package_dir = temp_dir.join(file_name).join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;
     create_src(&package_dir, &package.src)?;
 
     let package_target_dir = package_dir.join("target");
-    let cache_target_dir = cache::cache_dir().join(&package.name).join("target");
+    let cache_target_dir = cache::cache_dir()
+        .join(file_name)
+        .join(&package.name)
+        .join("target");
 
     cache::restore(&cache_target_dir, &package_target_dir)?;
     cargo_check(&package_dir, quiet)?;
@@ -114,16 +117,19 @@ fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Re
     Ok(())
 }
 
-pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()> {
+pub(crate) fn build(file_name: &str, package: &Package, release: bool, quiet: bool) -> Result<()> {
     let temp_dir = temp_dir();
-    let package_dir = temp_dir.join(&package.name);
+    let package_dir = temp_dir.join(file_name).join(&package.name);
     fs::create_dir_all(&package_dir)?;
 
     create_toml(&package_dir, &package.toml)?;
     create_src(&package_dir, &package.src)?;
 
     let package_target_dir = package_dir.join("target");
-    let cache_target_dir = cache::cache_dir().join(&package.name).join("target");
+    let cache_target_dir = cache::cache_dir()
+        .join(file_name)
+        .join(&package.name)
+        .join("target");
 
     cache::restore(&cache_target_dir, &package_target_dir)?;
     cargo_build(&package_dir, release, quiet)?;
@@ -137,15 +143,16 @@ pub(crate) fn build(package: &Package, release: bool, quiet: bool) -> Result<()>
         return Ok(());
     }
 
-    cache::write_identity_hash(&package)?;
+    cache::write_identity_hash(file_name, &package)?;
 
     Ok(())
 }
 
 // Run
 
-fn execute(package_name: &str) -> Result<()> {
+fn execute(file_name: &str, package_name: &str) -> Result<()> {
     let execute_path = cache_dir()
+        .join(file_name)
         .join(&package_name)
         .join("target")
         .join("debug")
@@ -159,7 +166,7 @@ fn execute(package_name: &str) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn run(package: &Package, quiet: bool) -> Result<()> {
+pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
     let output_text = format!("Run {} package", &package.name)
         .bright_green()
         .bold();
@@ -167,39 +174,49 @@ pub(crate) fn run(package: &Package, quiet: bool) -> Result<()> {
     // If there is no change in either src or toml, use the executable file on the cache.
     if cache::check_identity_hash(&package).is_some() {
         println!("{output_text}");
-        return execute(&package.name);
+        return execute(file_name, &package.name);
     }
 
-    build(&package, false, quiet)?;
+    build(file_name, package, false, quiet)?;
 
     println!("{output_text}");
-    execute(&package.name)?;
+    execute(file_name, &package.name)?;
 
     Ok(())
 }
 
 // Release
 
-fn distribute<P: AsRef<Path>>(package_name: &str, out_dir: P) -> Result<()> {
-    let file_name = if cfg!(windows) {
+fn distribute<P: AsRef<Path>>(file_name: &str, package_name: &str, out_dir: P) -> Result<()> {
+    let exe_name = if cfg!(windows) {
         format!("{}.exe", package_name)
     } else {
         package_name.to_owned()
     };
     let execute_path = cache_dir()
+        .join(file_name)
         .join(&package_name)
         .join("target")
         .join("release")
-        .join(&file_name);
-    let target_path = out_dir.as_ref().join(&file_name);
+        .join(&exe_name);
+
+    let out_dir = out_dir.as_ref();
+    fs::create_dir_all(out_dir)?;
+
+    let target_path = out_dir.join(&exe_name);
     fs::copy(&execute_path, target_path)?;
 
     Ok(())
 }
 
-pub(crate) fn release<P: AsRef<Path>>(package: &Package, out_dir: P, quiet: bool) -> Result<()> {
-    build(&package, true, quiet)?;
-    distribute(&package.name, out_dir)?;
+pub(crate) fn release<P: AsRef<Path>>(
+    file_name: &str,
+    package: &Package,
+    out_dir: P,
+    quiet: bool,
+) -> Result<()> {
+    build(file_name, package, true, quiet)?;
+    distribute(file_name, &package.name, out_dir)?;
 
     Ok(())
 }
@@ -289,7 +306,10 @@ fn create_gitignore<P: AsRef<Path>>(package_dir: P) -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<()> {
+pub(crate) fn extract<P: AsRef<Path>>(
+    package: &Package,
+    out_dir: P,
+) -> Result<()> {
     let package_dir = out_dir.as_ref().join(&package.name);
     fs::create_dir_all(&package_dir)?;
 

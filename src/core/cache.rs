@@ -52,9 +52,12 @@ pub(crate) fn write_identity_hash(file_name: &str, package: &Package) -> Result<
     Ok(())
 }
 
-pub(crate) fn check_identity_hash(package: &Package) -> Option<()> {
+pub(crate) fn check_identity_hash(file_name: &str, package: &Package) -> Option<()> {
     let identity = package.gen_identity();
-    let cache_identity_path = cache_dir().join(&package.name).join("identity_hash.toml");
+    let cache_identity_path = cache_dir()
+        .join(file_name)
+        .join(&package.name)
+        .join("identity_hash.toml");
     if let Ok(cache_identity) = fs::read_to_string(&cache_identity_path) {
         let cache_identity: Identity = toml::from_str(&cache_identity).unwrap();
         if identity.hash == cache_identity.hash {

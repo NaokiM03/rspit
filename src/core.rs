@@ -172,7 +172,7 @@ pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()>
         .bold();
 
     // If there is no change in either src or toml, use the executable file on the cache.
-    if cache::check_identity_hash(&package).is_some() {
+    if cache::check_identity_hash(file_name, package).is_some() {
         println!("{output_text}");
         return execute(file_name, &package.name);
     }

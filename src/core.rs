@@ -131,12 +131,6 @@ pub(crate) fn build(file_name: &str, package: &Package, release: bool, quiet: bo
 
     let _ = fs::remove_dir_all(temp_dir);
 
-    // The hash is not stored at release build time.
-    // This is because release build is only used with the `release` command.
-    if release {
-        return Ok(());
-    }
-
     cache.write_identity_hash()?;
 
     Ok(())
@@ -177,7 +171,7 @@ pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()>
 
 // Release
 
-fn distribute<P: AsRef<Path>>(cache: Cache, out_dir: P) -> Result<()> {
+fn distribute<P: AsRef<Path>>(cache: &Cache, out_dir: P) -> Result<()> {
     let exe_name = if cfg!(windows) {
         format!("{}.exe", cache.package_name())
     } else {
@@ -202,8 +196,13 @@ pub(crate) fn release<P: AsRef<Path>>(
 ) -> Result<()> {
     let cache = Cache::new(file_name, &package.name, &package.identity_hash());
 
+    if cache.is_same_identity_hash() {
+        return distribute(&cache, &out_dir);
+    }
+
     build(file_name, package, true, quiet)?;
-    distribute(cache, out_dir)?;
+
+    distribute(&cache, &out_dir)?;
 
     Ok(())
 }

@@ -86,6 +86,9 @@ enum SubCommands {
     },
     /// Remove everything in the cache directory
     Clean,
+    #[doc(hidden)]
+    #[clap(hide = true)]
+    ListCaches { file_path: String },
 }
 
 pub(crate) fn main() -> Result<()> {
@@ -162,6 +165,9 @@ pub(crate) fn main() -> Result<()> {
             }
             SubCommands::Clean => {
                 commands::clean_cache_dir()?;
+            }
+            SubCommands::ListCaches { file_path } => {
+                commands::list_cached_packages(file_path)?;
             }
         }
     } else {

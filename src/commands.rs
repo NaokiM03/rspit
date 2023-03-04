@@ -5,6 +5,7 @@ mod clean;
 mod extract;
 mod init;
 mod list;
+mod list_caches;
 mod release;
 mod run;
 
@@ -15,5 +16,6 @@ pub(crate) use clean::clean_cache_dir;
 pub(crate) use extract::extract_package;
 pub(crate) use init::init_snippet;
 pub(crate) use list::list_packages;
+pub(crate) use list_caches::list_cached_packages;
 pub(crate) use release::{release_all, release_all_parallel, release_specified_package};
 pub(crate) use run::{run_all, run_specified_package};

@@ -229,7 +229,7 @@ fn main() {{
 
 // List
 // Removed because too simple.
-// For exaple, if want an option to show 
+// For exaple, if want an option to show
 
 // Add
 
@@ -294,6 +294,18 @@ pub(crate) fn clean() -> Result<()> {
     for entry in Cache::root_dir().read_dir()? {
         let Ok(entry) = entry else { continue };
         fs::remove_dir_all(entry.path())?;
+    }
+
+    Ok(())
+}
+
+// ListCaches
+
+pub(crate) fn list_caches(file_name: &str, package: &Package) -> Result<()> {
+    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
+
+    if cache.is_same_identity_hash() {
+        println!("{}", package.name);
     }
 
     Ok(())

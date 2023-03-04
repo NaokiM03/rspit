@@ -162,8 +162,7 @@ pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()>
 
     let cache = Cache::new(file_name, &package.name, &package.identity_hash());
 
-    // If there is no change in either src or toml, use the executable file on the cache.
-    if cache.check_identity_hash().is_some() {
+    if cache.is_same_identity_hash() {
         println!("{output_text}");
         return execute(cache);
     }

@@ -86,14 +86,10 @@ impl Cache {
         Ok(())
     }
 
-    pub(crate) fn check_identity_hash(&self) -> Option<()> {
+    pub(crate) fn is_same_identity_hash(&self) -> bool {
         let path = self.package_dir().join("identity_hash");
 
-        if let Ok(identity_hash) = fs::read_to_string(&path) {
-            if identity_hash == self.identity_hash {
-                return Some(());
-            }
-        }
-        None
+        let Ok(identity_hash) = fs::read_to_string(&path) else { return false };
+        identity_hash == self.identity_hash
     }
 }

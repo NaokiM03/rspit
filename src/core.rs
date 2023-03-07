@@ -82,17 +82,16 @@ pub(crate) fn build(
 
 // Run
 
-fn execute<P: AsRef<Path>>(exe: P) -> Result<()> {
-    let exit_status = process::Command::new(exe.as_ref()).spawn()?.wait()?;
+pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
+    fn execute<P: AsRef<Path>>(exe: P) -> Result<()> {
+        let exit_status = process::Command::new(exe.as_ref()).spawn()?.wait()?;
+        if !exit_status.success() {
+            bail!("Failed to execute.");
+        }
 
-    if !exit_status.success() {
-        bail!("Failed to execute.");
+        Ok(())
     }
 
-    Ok(())
-}
-
-pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
     let output_text = format!("Run {} package", &package.name)
         .bright_green()
         .bold();
@@ -106,25 +105,30 @@ pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()>
 
 // Release
 
-fn distribute<P: AsRef<Path>, Q: AsRef<Path>>(exe: P, out_dir: Q, exe_name: &str) -> Result<()> {
-    let from = exe.as_ref();
-
-    let to = {
-        let out_dir = out_dir.as_ref();
-        fs::create_dir_all(out_dir)?;
-        out_dir.join(exe_name)
-    };
-    fs::copy(from, to)?;
-
-    Ok(())
-}
-
 pub(crate) fn release<P: AsRef<Path>>(
     file_name: &str,
     package: &Package,
     out_dir: P,
     quiet: bool,
 ) -> Result<()> {
+    fn distribute<P: AsRef<Path>, Q: AsRef<Path>>(
+        exe: P,
+        out_dir: Q,
+        exe_name: &str,
+    ) -> Result<()> {
+        let from = exe.as_ref();
+
+        let to = {
+            let out_dir = out_dir.as_ref();
+            fs::create_dir_all(out_dir)?;
+            out_dir.join(exe_name)
+        };
+
+        fs::copy(from, to)?;
+
+        Ok(())
+    }
+
     let cache = build(file_name, package, true, quiet)?;
     distribute(&cache.release_exe, &out_dir, &cache.exe_name)?;
 

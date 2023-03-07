@@ -1,53 +1,19 @@
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-    process,
-};
+use std::{fs, path::Path, process};
 
 use anyhow::{bail, Result};
-use rand::{distributions::Alphanumeric, seq::SliceRandom, thread_rng, Rng};
 use tiny_ansi::TinyAnsi;
 
 mod cache;
 mod package;
+mod temp_dir;
+mod utils;
 
-pub(crate) use cache::Cache;
-pub(crate) use package::{packages_from_path, Package};
+pub(crate) use package::packages_from_path;
 
-fn random_name() -> String {
-    let random_str: String = "abcdefghijklmnopqrstuvwxyz0123456789"
-        .as_bytes()
-        .choose_multiple(&mut thread_rng(), 7)
-        .cloned()
-        .map(char::from)
-        .collect();
-    format!("tmp-{}", random_str)
-}
-
-fn temp_dir() -> PathBuf {
-    let suffix: String = thread_rng()
-        .sample_iter(Alphanumeric)
-        .take(16)
-        .map(char::from)
-        .collect();
-    env::temp_dir().join(format!("pit-{}", suffix))
-}
-
-fn create_toml<P: AsRef<Path>>(package_dir: P, toml: &str) -> Result<()> {
-    let toml_file = package_dir.as_ref().join("Cargo.toml");
-    fs::write(toml_file, toml.as_bytes())?;
-
-    Ok(())
-}
-
-fn create_src<P: AsRef<Path>>(package_dir: P, src: &str) -> Result<()> {
-    let src_dir = package_dir.as_ref().join("src");
-    fs::create_dir(&src_dir)?;
-    let src_file = src_dir.join("main.rs");
-    fs::write(src_file, src.as_bytes())?;
-
-    Ok(())
-}
+use cache::Cache;
+use package::Package;
+use temp_dir::TempDir;
+use utils::{create_src, create_toml, random_name};
 
 // Check
 
@@ -67,21 +33,14 @@ fn cargo_check<P: AsRef<Path>>(package_dir: P, quiet: bool) -> Result<()> {
 }
 
 pub(crate) fn check(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
-    let temp_dir = temp_dir();
-    let package_dir = temp_dir.join(&package.name);
-    fs::create_dir_all(&package_dir)?;
-
-    create_toml(&package_dir, &package.toml)?;
-    create_src(&package_dir, &package.src)?;
-
-    let package_target_dir = package_dir.join("target");
+    let temp_dir = TempDir::new(&package);
     let cache = Cache::new(file_name, &package.name, &package.identity_hash());
 
-    cache.restore(&package_target_dir)?;
-    cargo_check(&package_dir, quiet)?;
-    cache.store(&package_target_dir)?;
+    cache.restore(&temp_dir.package_target_dir)?;
+    cargo_check(&temp_dir.package_dir, quiet)?;
+    cache.store(&temp_dir.package_target_dir)?;
 
-    let _ = fs::remove_dir_all(temp_dir);
+    let _ = temp_dir.remove();
 
     Ok(())
 }
@@ -130,22 +89,15 @@ pub(crate) fn build(
         .bold();
     println!("{output_text}");
 
-    let temp_dir = temp_dir();
-    let package_dir = temp_dir.join(&package.name);
-    fs::create_dir_all(&package_dir)?;
+    let temp_dir = TempDir::new(&package);
 
-    create_toml(&package_dir, &package.toml)?;
-    create_src(&package_dir, &package.src)?;
-
-    let package_target_dir = package_dir.join("target");
-
-    cache.restore(&package_target_dir)?;
-    if let Err(e) = cargo_build(&package_dir, release, quiet) {
-        cache.store(&package_target_dir)?;
+    cache.restore(&temp_dir.package_target_dir)?;
+    if let Err(e) = cargo_build(&temp_dir.package_dir, release, quiet) {
+        cache.store(&temp_dir.package_target_dir)?;
         let _ = cache.delete_identity_hash();
         return Err(e);
     }
-    cache.store(&package_target_dir)?;
+    cache.store(&temp_dir.package_target_dir)?;
 
     // Cache is also used for release build,
     // but compiled each time.
@@ -153,7 +105,7 @@ pub(crate) fn build(
         cache.write_identity_hash()?;
     }
 
-    let _ = fs::remove_dir_all(temp_dir);
+    let _ = temp_dir.remove();
 
     Ok(cache)
 }

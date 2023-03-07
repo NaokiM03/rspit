@@ -92,4 +92,11 @@ impl Cache {
         let Ok(identity_hash) = fs::read_to_string(&path) else { return false };
         identity_hash == self.identity_hash
     }
+
+    pub(crate) fn delete_identity_hash(&self) -> Result<()> {
+        let path = self.package_dir().join("identity_hash");
+        fs::remove_file(path)?;
+
+        Ok(())
+    }
 }

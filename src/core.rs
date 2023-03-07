@@ -106,7 +106,30 @@ fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Re
     Ok(())
 }
 
-pub(crate) fn build(file_name: &str, package: &Package, release: bool, quiet: bool) -> Result<()> {
+pub(crate) fn build(
+    file_name: &str,
+    package: &Package,
+    release: bool,
+    quiet: bool,
+) -> Result<Cache> {
+    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
+    if !release && cache.is_same_identity_hash() {
+        let output_text = format!(
+            "Skip building the {} package because it is cached.",
+            &package.name
+        )
+        .bright_green()
+        .bold();
+        println!("{output_text}");
+
+        return Ok(cache);
+    }
+
+    let output_text = format!("Build {} package", &package.name)
+        .bright_green()
+        .bold();
+    println!("{output_text}");
+
     let temp_dir = temp_dir();
     let package_dir = temp_dir.join(&package.name);
     fs::create_dir_all(&package_dir)?;
@@ -115,17 +138,24 @@ pub(crate) fn build(file_name: &str, package: &Package, release: bool, quiet: bo
     create_src(&package_dir, &package.src)?;
 
     let package_target_dir = package_dir.join("target");
-    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
 
     cache.restore(&package_target_dir)?;
-    cargo_build(&package_dir, release, quiet)?;
+    if let Err(e) = cargo_build(&package_dir, release, quiet) {
+        cache.store(&package_target_dir)?;
+        let _ = cache.delete_identity_hash();
+        return Err(e);
+    }
     cache.store(&package_target_dir)?;
+
+    // Cache is also used for release build,
+    // but compiled each time.
+    if !release {
+        cache.write_identity_hash()?;
+    }
 
     let _ = fs::remove_dir_all(temp_dir);
 
-    cache.write_identity_hash()?;
-
-    Ok(())
+    Ok(cache)
 }
 
 // Run
@@ -145,17 +175,9 @@ pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()>
     let output_text = format!("Run {} package", &package.name)
         .bright_green()
         .bold();
-
-    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
-
-    if cache.is_same_identity_hash() {
-        println!("{output_text}");
-        return execute(cache);
-    }
-
-    build(file_name, package, false, quiet)?;
-
     println!("{output_text}");
+
+    let cache = build(file_name, package, false, quiet)?;
     execute(cache)?;
 
     Ok(())
@@ -186,14 +208,7 @@ pub(crate) fn release<P: AsRef<Path>>(
     out_dir: P,
     quiet: bool,
 ) -> Result<()> {
-    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
-
-    if cache.is_same_identity_hash() {
-        return distribute(&cache, &out_dir);
-    }
-
-    build(file_name, package, true, quiet)?;
-
+    let cache = build(file_name, package, true, quiet)?;
     distribute(&cache, &out_dir)?;
 
     Ok(())

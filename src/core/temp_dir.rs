@@ -11,7 +11,7 @@ use super::{
 pub(super) struct TempDir {
     root: PathBuf,
     pub(super) package_dir: PathBuf,
-    pub(super) package_target_dir: PathBuf,
+    pub(super) target_dir: PathBuf,
 }
 
 impl TempDir {
@@ -35,12 +35,12 @@ impl TempDir {
 
         // The target directory is not created
         // because it is renamed from the cache.
-        let package_target_dir = package_dir.join("target");
+        let target_dir = package_dir.join("target");
 
         TempDir {
             root,
             package_dir,
-            package_target_dir,
+            target_dir,
         }
     }
 

@@ -34,11 +34,11 @@ fn cargo_check<P: AsRef<Path>>(package_dir: P, quiet: bool) -> Result<()> {
 
 pub(crate) fn check(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
     let temp_dir = TempDir::new(&package);
-    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
+    let cache = Cache::new(file_name, &package.name);
 
-    cache.restore(&temp_dir.package_target_dir)?;
+    cache.restore(&temp_dir.target_dir)?;
     cargo_check(&temp_dir.package_dir, quiet)?;
-    cache.store(&temp_dir.package_target_dir)?;
+    cache.store(&temp_dir.target_dir)?;
 
     let _ = temp_dir.remove();
 
@@ -71,8 +71,10 @@ pub(crate) fn build(
     release: bool,
     quiet: bool,
 ) -> Result<Cache> {
-    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
-    if !release && cache.is_same_identity_hash() {
+    let cache = Cache::new(file_name, &package.name);
+
+    let new_identity_hash = package.identity_hash();
+    if !release && cache.is_same_identity_hash(&new_identity_hash) {
         let output_text = format!(
             "Skip building the {} package because it is cached.",
             &package.name
@@ -91,18 +93,18 @@ pub(crate) fn build(
 
     let temp_dir = TempDir::new(&package);
 
-    cache.restore(&temp_dir.package_target_dir)?;
+    cache.restore(&temp_dir.target_dir)?;
     if let Err(e) = cargo_build(&temp_dir.package_dir, release, quiet) {
-        cache.store(&temp_dir.package_target_dir)?;
+        cache.store(&temp_dir.target_dir)?;
         let _ = cache.delete_identity_hash();
         return Err(e);
     }
-    cache.store(&temp_dir.package_target_dir)?;
+    cache.store(&temp_dir.target_dir)?;
 
     // Cache is also used for release build,
     // but compiled each time.
     if !release {
-        cache.write_identity_hash()?;
+        cache.write_identity_hash(&new_identity_hash)?;
     }
 
     let _ = temp_dir.remove();
@@ -112,9 +114,8 @@ pub(crate) fn build(
 
 // Run
 
-fn execute(cache: Cache) -> Result<()> {
-    let exe = cache.debug_exe();
-    let exit_status = process::Command::new(exe).spawn()?.wait()?;
+fn execute<P: AsRef<Path>>(exe: P) -> Result<()> {
+    let exit_status = process::Command::new(exe.as_ref()).spawn()?.wait()?;
 
     if !exit_status.success() {
         bail!("Failed to execute.");
@@ -130,25 +131,21 @@ pub(crate) fn run(file_name: &str, package: &Package, quiet: bool) -> Result<()>
     println!("{output_text}");
 
     let cache = build(file_name, package, false, quiet)?;
-    execute(cache)?;
+    execute(cache.debug_exe)?;
 
     Ok(())
 }
 
 // Release
 
-fn distribute<P: AsRef<Path>>(cache: &Cache, out_dir: P) -> Result<()> {
-    let exe_name = if cfg!(windows) {
-        format!("{}.exe", cache.package_name())
-    } else {
-        cache.package_name()
+fn distribute<P: AsRef<Path>, Q: AsRef<Path>>(exe: P, out_dir: Q, exe_name: &str) -> Result<()> {
+    let from = exe.as_ref();
+
+    let to = {
+        let out_dir = out_dir.as_ref();
+        fs::create_dir_all(out_dir)?;
+        out_dir.join(exe_name)
     };
-    let from = cache.release_exe();
-
-    let out_dir = out_dir.as_ref();
-    fs::create_dir_all(out_dir)?;
-
-    let to = out_dir.join(&exe_name);
     fs::copy(from, to)?;
 
     Ok(())
@@ -161,7 +158,7 @@ pub(crate) fn release<P: AsRef<Path>>(
     quiet: bool,
 ) -> Result<()> {
     let cache = build(file_name, package, true, quiet)?;
-    distribute(&cache, &out_dir)?;
+    distribute(&cache.release_exe, &out_dir, &cache.exe_name)?;
 
     Ok(())
 }
@@ -258,7 +255,7 @@ pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<(
 // Clean
 
 pub(crate) fn clean() -> Result<()> {
-    for entry in Cache::root_dir().read_dir()? {
+    for entry in cache::root_dir().read_dir()? {
         let Ok(entry) = entry else { continue };
         fs::remove_dir_all(entry.path())?;
     }
@@ -269,9 +266,10 @@ pub(crate) fn clean() -> Result<()> {
 // ListCaches
 
 pub(crate) fn list_caches(file_name: &str, package: &Package) -> Result<()> {
-    let cache = Cache::new(file_name, &package.name, &package.identity_hash());
+    let cache = Cache::new(file_name, &package.name);
 
-    if cache.is_same_identity_hash() {
+    let new_identity_hash = package.identity_hash();
+    if cache.is_same_identity_hash(&new_identity_hash) {
         println!("{}", package.name);
     }
 

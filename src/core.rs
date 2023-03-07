@@ -4,6 +4,7 @@ use anyhow::{bail, Result};
 use tiny_ansi::TinyAnsi;
 
 mod cache;
+mod cargo;
 mod package;
 mod temp_dir;
 mod utils;
@@ -13,31 +14,16 @@ pub(crate) use package::packages_from_path;
 use cache::Cache;
 use package::Package;
 use temp_dir::TempDir;
-use utils::{create_src, create_toml, random_name};
+use utils::{create_gitignore, create_src, create_toml, random_name};
 
 // Check
-
-fn cargo_check<P: AsRef<Path>>(package_dir: P, quiet: bool) -> Result<()> {
-    let mut command = process::Command::new("cargo");
-    command.arg("check");
-    if quiet {
-        command.arg("--quiet");
-    }
-    let exit_status = command.current_dir(&package_dir).spawn()?.wait()?;
-
-    if !exit_status.success() {
-        bail!("Failed to check.");
-    }
-
-    Ok(())
-}
 
 pub(crate) fn check(file_name: &str, package: &Package, quiet: bool) -> Result<()> {
     let temp_dir = TempDir::new(&package);
     let cache = Cache::new(file_name, &package.name);
 
     cache.restore(&temp_dir.target_dir)?;
-    cargo_check(&temp_dir.package_dir, quiet)?;
+    cargo::check(&temp_dir.package_dir, quiet)?;
     cache.store(&temp_dir.target_dir)?;
 
     let _ = temp_dir.remove();
@@ -46,24 +32,6 @@ pub(crate) fn check(file_name: &str, package: &Package, quiet: bool) -> Result<(
 }
 
 // Build
-
-fn cargo_build<P: AsRef<Path>>(package_dir: P, release: bool, quiet: bool) -> Result<()> {
-    let mut command = process::Command::new("cargo");
-    command.arg("build");
-    if release {
-        command.arg("--release");
-    }
-    if quiet {
-        command.arg("--quiet");
-    }
-    let exit_status = command.current_dir(&package_dir).spawn()?.wait()?;
-
-    if !exit_status.success() {
-        bail!("Failed to build.");
-    }
-
-    Ok(())
-}
 
 pub(crate) fn build(
     file_name: &str,
@@ -94,7 +62,7 @@ pub(crate) fn build(
     let temp_dir = TempDir::new(&package);
 
     cache.restore(&temp_dir.target_dir)?;
-    if let Err(e) = cargo_build(&temp_dir.package_dir, release, quiet) {
+    if let Err(e) = cargo::build(&temp_dir.package_dir, release, quiet) {
         cache.store(&temp_dir.target_dir)?;
         let _ = cache.delete_identity_hash();
         return Err(e);
@@ -229,17 +197,6 @@ fn main() {{
 }
 
 // Extract
-
-fn create_gitignore<P: AsRef<Path>>(package_dir: P) -> Result<()> {
-    let gitignore = package_dir.as_ref().join(".gitignore");
-    let contents = r#"
-/target
-"#
-    .trim_start();
-    fs::write(gitignore, contents)?;
-
-    Ok(())
-}
 
 pub(crate) fn extract<P: AsRef<Path>>(package: &Package, out_dir: P) -> Result<()> {
     let package_dir = out_dir.as_ref().join(&package.name);

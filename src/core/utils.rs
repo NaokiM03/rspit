@@ -28,3 +28,14 @@ pub(super) fn create_src<P: AsRef<Path>>(package_dir: P, src: &str) -> Result<()
 
     Ok(())
 }
+
+pub(super) fn create_gitignore<P: AsRef<Path>>(package_dir: P) -> Result<()> {
+    let gitignore = package_dir.as_ref().join(".gitignore");
+    let contents = r#"
+/target
+"#
+    .trim_start();
+    fs::write(gitignore, contents)?;
+
+    Ok(())
+}
